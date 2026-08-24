@@ -12,6 +12,7 @@ import com.liminalis.plugin.combat.CombatListener;
 import com.liminalis.plugin.command.AbilityCommands;
 import com.liminalis.plugin.command.AuditLog;
 import com.liminalis.plugin.command.InjuryCommands;
+import com.liminalis.plugin.command.ItemsMenu;
 import com.liminalis.plugin.command.SingularityCommands;
 import com.liminalis.plugin.command.BoonCommands;
 import com.liminalis.plugin.command.LimboPlayerCommand;
@@ -21,7 +22,7 @@ import com.liminalis.plugin.command.ProfileCommand;
 import com.liminalis.plugin.command.TraitCommands;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.injury.Injuries;
-import com.liminalis.plugin.injury.InjuryHud;
+import com.liminalis.plugin.hud.PlayerHud;
 import com.liminalis.plugin.injury.InjuryService;
 import com.liminalis.plugin.rescue.RescueService;
 import com.liminalis.plugin.rescue.ThresholdStone;
@@ -80,7 +81,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private SingularityService singularity;
     private RescueService rescue;
     private AbilityService abilities;
-    private InjuryHud injuryHud;
+    private PlayerHud hud;
     private ModifierRegistry registry;
 
     @Override
@@ -128,7 +129,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         ThresholdStone.registerRecipe(this, messages);
         abilities = new AbilityService(this, config, profiles, registry, modifiers,
                 rescue, messages, debug);
-        injuryHud = new InjuryHud(this, profiles, registry);
+        hud = new PlayerHud(this, config, profiles, registry, singularity);
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
@@ -149,7 +150,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         injuries.start();
         singularity.start();
         rescue.start();
-        injuryHud.start();
+        hud.start();
 
         registerCommands();
 
@@ -160,8 +161,8 @@ public final class LiminalisPlugin extends JavaPlugin {
     public void onDisable() {
         // Order matters: strip attribute modifiers before the profiles are flushed, so a
         // player's saved state never includes bonuses that only exist while we are running.
-        if (injuryHud != null) {
-            injuryHud.stop();
+        if (hud != null) {
+            hud.stop();
         }
         if (rescue != null) {
             rescue.stop();
@@ -225,11 +226,13 @@ public final class LiminalisPlugin extends JavaPlugin {
                 messages, audit, command.knownPlayers());
         AbilityCommands abilityCommands = new AbilityCommands(profiles, registry, modifiers,
                 messages, audit, confirmations, command.knownPlayers());
+        ItemsMenu itemsMenu = new ItemsMenu(this, messages);
+        getServer().getPluginManager().registerEvents(itemsMenu, this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(
                     command.build(livesAndLimbo, traitCommands, boonCommands, injuryCommands,
-                            singularityCommands, abilityCommands),
+                            singularityCommands, abilityCommands, itemsMenu),
                     "Liminalis administration",
                     List.of("lim"));
             event.registrar().register(

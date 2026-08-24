@@ -90,7 +90,8 @@ public final class LiminalisCommand {
                                                        BoonCommands boons,
                                                        InjuryCommands injuries,
                                                        SingularityCommands singularity,
-                                                       AbilityCommands abilities) {
+                                                       AbilityCommands abilities,
+                                                       ItemsMenu items) {
         return Commands.literal("liminalis")
                 .requires(source -> source.getSender().hasPermission("liminalis.admin"))
                 .executes(this::showOverview)
@@ -105,7 +106,27 @@ public final class LiminalisCommand {
                 .then(injuries.tree())
                 .then(singularity.tree())
                 .then(abilities.tree())
+                .then(Commands.literal("items")
+                        .requires(permission("liminalis.admin.items"))
+                        .executes(context -> openItems(context, items)))
                 .build();
+    }
+
+    /**
+     * Opens the item chest.
+     *
+     * <p>Saves remembering that residue comes from one subtree, that Threshold Stones have no
+     * command at all, and that each of the five books has an id which is not quite its title.
+     */
+    private int openItems(CommandContext<CommandSourceStack> context, ItemsMenu items) {
+        CommandSender sender = context.getSource().getSender();
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text(
+                    "Only a player can open the item menu.", BAD));
+            return Command.SINGLE_SUCCESS;
+        }
+        items.openFor(player);
+        return Command.SINGLE_SUCCESS;
     }
 
     // --------------------------------------------------------------------------- reload
@@ -355,7 +376,7 @@ public final class LiminalisCommand {
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
                 "Subcommands: reload, profile, debug, data, lives, limbo,"
-                        + " trait, boon, injury, singularity, ability", LABEL));
+                        + " trait, boon, injury, singularity, ability, items", LABEL));
         return Command.SINGLE_SUCCESS;
     }
 

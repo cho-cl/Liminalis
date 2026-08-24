@@ -174,6 +174,13 @@ singularity:
   min-residue: 1
   max-residue: 3
 
+  # How far away a player starts to feel one of these, in blocks.
+  #
+  # Deliberately larger than min-distance above, so the warning lands before the
+  # creature does rather than at the same moment. Set to 0 to remove the warning
+  # entirely and let them arrive unannounced.
+  sense-range: 40.0
+
 injuries:
   # Severity is judged on damage AFTER armour, as a fraction of the victim's own maximum
   # health. Post-armour is what makes heavy protection genuinely protective against being

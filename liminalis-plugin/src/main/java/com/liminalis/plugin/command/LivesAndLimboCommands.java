@@ -20,7 +20,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -57,6 +62,14 @@ public final class LivesAndLimboCommands {
     private final AuditLog audit;
     private final ConfirmationTracker confirmations;
     private final SuggestionProvider<CommandSourceStack> playerNames;
+
+    /**
+     * Where each operator was standing before limbo tp moved them.
+     *
+     * <p>In memory only. A restart losing it costs an admin one manual teleport, which is a
+     * far better trade than another field on every player's profile.
+     */
+    private final Map<UUID, Location> returnPoints = new ConcurrentHashMap<>();
 
     public LivesAndLimboCommands(ConfigService config,
                                  ProfileManager profiles,
@@ -208,7 +221,11 @@ public final class LivesAndLimboCommands {
                         .then(target().executes(this::sendToLimbo)))
                 .then(Commands.literal("revive")
                         .then(target().executes(this::revive)))
-                .then(Commands.literal("tp").executes(this::teleportToLimbo))
+                .then(Commands.literal("tp")
+                        .executes(context -> teleportToLimbo(context, null))
+                        .then(target().executes(context -> teleportToLimbo(context,
+                                StringArgumentType.getString(context, "player")))))
+                .then(Commands.literal("back").executes(this::teleportBack))
                 .then(Commands.literal("ghostreset")
                         .then(target().executes(this::resetGhostCooldown)));
     }
@@ -300,20 +317,66 @@ public final class LivesAndLimboCommands {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int teleportToLimbo(CommandContext<CommandSourceStack> context) {
+    /**
+     * Visits Limbo without being condemned to it.
+     *
+     * <p>Containment only applies to players whose profile says they belong there, so an
+     * operator can walk out again - but Limbo has no landmarks and no exits, so where they
+     * came from is remembered and {@code limbo back} returns them. Without that, the honest
+     * way out is to look up your own coordinates from before you ran the command.
+     */
+    private int teleportToLimbo(CommandContext<CommandSourceStack> context, String targetName) {
+        CommandSender sender = context.getSource().getSender();
+        if (!limbo.world().isReady()) {
+            sender.sendMessage(Component.text("Limbo is not open.", BAD));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        Player subject;
+        if (targetName != null) {
+            subject = Bukkit.getPlayerExact(targetName);
+            if (subject == null) {
+                sender.sendMessage(Component.text(targetName + " is not online.", BAD));
+                return Command.SINGLE_SUCCESS;
+            }
+        } else if (sender instanceof Player self) {
+            subject = self;
+        } else {
+            sender.sendMessage(Component.text(
+                    "From console, name the player to send.", BAD));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        returnPoints.put(subject.getUniqueId(), subject.getLocation().clone());
+        subject.teleport(limbo.world().arrivalPoint());
+
+        sender.sendMessage(Component.text(subject.getName()
+                + " is in Limbo. Not trapped - containment only applies to the dead.", LABEL));
+        sender.sendMessage(Component.text("/liminalis limbo back returns them.", LABEL));
+        if (!subject.equals(sender)) {
+            subject.sendMessage(Component.text(
+                    "You have been sent to Limbo. You are not dead.", LABEL));
+        }
+        audit.record(name(sender), "limbo.tp", subject.getName());
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** Returns whoever ran it to wherever limbo tp picked them up from. */
+    private int teleportBack(CommandContext<CommandSourceStack> context) {
         CommandSender sender = context.getSource().getSender();
         if (!(sender instanceof Player player)) {
             sender.sendMessage(Component.text("Only a player can teleport.", BAD));
             return Command.SINGLE_SUCCESS;
         }
-        if (!limbo.world().isReady()) {
-            sender.sendMessage(Component.text("Limbo is not open.", BAD));
+        Location home = returnPoints.remove(player.getUniqueId());
+        if (home == null) {
+            sender.sendMessage(Component.text(
+                    "Nowhere recorded to send you. Use /liminalis limbo tp first.", WARN));
             return Command.SINGLE_SUCCESS;
         }
-        player.teleport(limbo.world().arrivalPoint());
-        sender.sendMessage(Component.text("Sent you to Limbo. You are not trapped -"
-                + " containment only applies to the dead.", LABEL));
-        audit.record(name(sender), "limbo.tp", name(sender));
+        player.teleport(home);
+        sender.sendMessage(Component.text("Back where you were.", GOOD));
+        audit.record(name(sender), "limbo.back", name(sender));
         return Command.SINGLE_SUCCESS;
     }
 

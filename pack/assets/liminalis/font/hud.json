@@ -71,6 +71,15 @@
       "chars": [
         "\ue008"
       ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/presence.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue009"
+      ]
     }
   ]
 }

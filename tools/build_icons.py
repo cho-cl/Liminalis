@@ -15,12 +15,29 @@ it matters.
 Run:  python tools/build_icons.py
 """
 
+import json
 from pathlib import Path
 
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "pack" / "assets" / "liminalis" / "textures" / "font" / "injury"
+FONT = ROOT / "pack" / "assets" / "liminalis" / "font" / "hud.json"
+
+# Codepoint order. The font file and the plugin's glyph map are both generated or checked
+# against this list, so the three can never drift apart - which used to be the easiest way
+# to ship a HUD that shows players empty boxes.
+CODEPOINTS = [
+    ("bleeding", 0xE001),
+    ("sprained_ankle", 0xE002),
+    ("burns", 0xE003),
+    ("concussion", 0xE004),
+    ("punctured_lung", 0xE005),
+    ("lost_arm", 0xE006),
+    ("broken_legs", 0xE007),
+    ("charred", 0xE008),
+    ("presence", 0xE009),
+]
 
 # Shared palette. Keys are the characters used in the grids.
 #   .  transparent      o  outline
@@ -199,6 +216,26 @@ CHARRED = """
 ................
 """
 
+PRESENCE = """
+................
+.......oo.......
+......o##o......
+.....o#++#o.....
+....o#+xx+#o....
+...o#+xoox+#o...
+..o#+xo..ox+#o..
+..o#xo....ox#o..
+..o#xo....ox#o..
+..o#+xo..ox+#o..
+...o#+xoox+#o...
+....o#+xx+#o....
+.....o#++#o.....
+......o##o......
+.......oo.......
+................
+"""
+
+
 ICONS = {
     "bleeding": (BLEEDING, palette((60, 8, 8, 255), (168, 26, 26, 255),
                                    (214, 66, 66, 255), (120, 16, 16, 255))),
@@ -217,6 +254,10 @@ ICONS = {
                                          (236, 232, 220, 255), (110, 96, 88, 255))),
     "charred": (CHARRED, palette((72, 10, 10, 255), (62, 58, 56, 255),
                                  (104, 98, 94, 255), (28, 26, 24, 255))),
+    # Not an injury: the mark shown when something the Singularity sent is nearby.
+    # Cold violet-grey, so it never reads as a wound among the wound icons.
+    "presence": (PRESENCE, palette((38, 32, 52, 255), (128, 118, 160, 255),
+                                   (176, 168, 206, 255), (74, 66, 100, 255))),
 }
 
 
@@ -256,7 +297,42 @@ def build_pack_icon(path):
     image.save(path)
 
 
+def build_font():
+    """
+    Writes hud.json from CODEPOINTS.
+
+    Generated rather than hand-maintained because a font file that disagrees with the
+    textures beside it produces empty boxes on players' screens and no error anywhere.
+    """
+    providers = [
+        {
+            "type": "bitmap",
+            "file": f"liminalis:font/injury/{name}.png",
+            "ascent": 8,
+            "height": 10,
+            "chars": [chr(cp)],
+        }
+        for name, cp in CODEPOINTS
+    ]
+    FONT.parent.mkdir(parents=True, exist_ok=True)
+    FONT.write_text(json.dumps({"providers": providers}, indent=2, ensure_ascii=True) + chr(10),
+                    encoding="utf-8")
+
+
+def check_coverage():
+    """Every codepoint needs a texture, and every texture needs a codepoint."""
+    named = {name for name, _ in CODEPOINTS}
+    drawn = set(ICONS)
+    missing_art = named - drawn
+    missing_codepoint = drawn - named
+    if missing_art:
+        raise SystemExit(f"codepoints with no icon defined: {sorted(missing_art)}")
+    if missing_codepoint:
+        raise SystemExit(f"icons with no codepoint: {sorted(missing_codepoint)}")
+
+
 def main():
+    check_coverage()
     OUT.mkdir(parents=True, exist_ok=True)
     for name, (grid, colours) in ICONS.items():
         target = OUT / f"{name}.png"
@@ -266,7 +342,10 @@ def main():
     icon = ROOT / "pack" / "pack.png"
     build_pack_icon(icon)
     print(f"  {icon.relative_to(ROOT)}")
-    print(f"{len(ICONS)} icons + pack icon written")
+
+    build_font()
+    print(f"  {FONT.relative_to(ROOT)}")
+    print(f"{len(ICONS)} icons + pack icon + font written")
 
 
 if __name__ == "__main__":

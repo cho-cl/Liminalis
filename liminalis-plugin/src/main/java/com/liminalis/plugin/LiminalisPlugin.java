@@ -4,6 +4,7 @@ import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.JsonProfileStore;
 import com.liminalis.core.profile.ProfileBackup;
 import com.liminalis.core.profile.ProfileStore;
+import com.liminalis.plugin.combat.CombatListener;
 import com.liminalis.plugin.command.AuditLog;
 import com.liminalis.plugin.command.LiminalisCommand;
 import com.liminalis.plugin.config.ConfigService;
@@ -79,6 +80,7 @@ public final class LiminalisPlugin extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
+        getServer().getPluginManager().registerEvents(new CombatListener(config, debug), this);
         modifiers.start();
 
         registerCommands(registry);

@@ -1,8 +1,12 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phase 0 (foundation) complete and verified on a real 1.21.11 server.
-> Phase 1 (world rules) is next. Each phase is built and verified in full before the next
-> one starts — see *Build phases* below.
+> **Status:** Phases 0 (foundation) and 1 (world rules) complete, verified on a real 1.21.11
+> server. Phase 2 (lives, death & Limbo) is next. Each phase is built and verified in full
+> before the next one starts — see *Build phases* below.
+>
+> Phase 1 carries one known gap: end crystals and player-ignited creepers are not yet
+> attributed as player damage, because neither can be traced to a player without tracking
+> who placed them. Everything else — melee, projectiles, pets, TNT — is covered.
 
 ## Context
 

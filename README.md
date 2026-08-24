@@ -72,6 +72,16 @@ mean a feature can be exercised on demand rather than waiting on a 30-minute spa
 
 ## Status
 
-**Phase 0 (foundation) complete.** Later phases — world rules, lives and Limbo, traits,
-blessings and curses, injuries, the Singularity, revival, abilities, the boss — are described
-in the design doc and built one at a time, each verified on a real server before the next.
+**Phase 0 (foundation) and Phase 1 (world rules) complete.**
+
+Phase 1 halves player-versus-player damage, halves healing from food, and buffs the
+Regeneration effect. Damage is traced back through projectiles, tamed pets and primed TNT to
+the player who actually caused it — halving only melee would not reduce fighting, it would
+just move it to bows and wolves. Each indirect source can be excluded in config.
+
+*Known gap:* end crystals and player-ignited creepers are not attributed, because neither can
+be traced to a player without tracking who placed them.
+
+Later phases — lives and Limbo, traits, blessings and curses, injuries, the Singularity,
+revival, abilities, the boss — are described in the design doc and built one at a time, each
+verified on a real server before the next.

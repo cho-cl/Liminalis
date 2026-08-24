@@ -1,5 +1,6 @@
 package com.liminalis.core.config;
 
+import com.liminalis.core.combat.CombatSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -123,5 +124,85 @@ class ConfigParserTest {
         assertThat(result.valid()).isFalse();
         assertThat(result.errors()).anySatisfy(error ->
                 assertThat(error).contains("lives.starting"));
+    }
+
+    // ------------------------------------------------------------------ combat section
+
+    @Test
+    void readsTheCombatSection() {
+        Map<String, Object> values = valid();
+        values.put("combat.pvp-damage-multiplier", 0.25);
+        values.put("combat.food-healing-multiplier", 0.75);
+        values.put("combat.regeneration-multiplier", 1.5);
+        values.put("combat.include-projectiles", false);
+        values.put("combat.include-pets", false);
+        values.put("combat.include-explosives", false);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        CombatSettings combat = result.config().combat();
+        assertThat(combat.pvpDamageMultiplier()).isEqualTo(0.25);
+        assertThat(combat.foodHealingMultiplier()).isEqualTo(0.75);
+        assertThat(combat.regenerationMultiplier()).isEqualTo(1.5);
+        assertThat(combat.includeProjectiles()).isFalse();
+        assertThat(combat.includePets()).isFalse();
+        assertThat(combat.includeExplosives()).isFalse();
+    }
+
+    @Test
+    void anAbsentCombatSectionUsesTheDefaults() {
+        ConfigResult result = ConfigParser.parse(valid());
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().combat()).isEqualTo(CombatSettings.DEFAULTS);
+    }
+
+    @Test
+    void acceptsAWholeNumberWhereADecimalIsExpected() {
+        // YAML gives back an Integer for "1", not a Double. Refusing that would be absurd.
+        Map<String, Object> values = valid();
+        values.put("combat.pvp-damage-multiplier", 1);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().combat().pvpDamageMultiplier()).isEqualTo(1.0);
+    }
+
+    @Test
+    void rejectsANegativeMultiplier() {
+        // Negative damage heals in Bukkit. This must never reach the server.
+        Map<String, Object> values = valid();
+        values.put("combat.pvp-damage-multiplier", -0.5);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("combat.pvp-damage-multiplier"));
+    }
+
+    @Test
+    void rejectsAMultiplierThatIsNotANumber() {
+        Map<String, Object> values = valid();
+        values.put("combat.regeneration-multiplier", "slightly more");
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("combat.regeneration-multiplier"));
+    }
+
+    @Test
+    void rejectsAnAbsurdlyLargeMultiplier() {
+        // A stray zero turning 0.5 into 50 would make a single hit lethal to anyone.
+        Map<String, Object> values = valid();
+        values.put("combat.pvp-damage-multiplier", 50.0);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
     }
 }

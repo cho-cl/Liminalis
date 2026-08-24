@@ -1,6 +1,7 @@
 package com.liminalis.core.config;
 
 import com.liminalis.core.combat.CombatSettings;
+import com.liminalis.core.limbo.LimboSettings;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -36,7 +37,7 @@ class ConfigParserTest {
 
         assertThat(result.valid()).isTrue();
         LiminalisConfig config = result.config();
-        assertThat(config.startingLives()).isEqualTo(5);
+        assertThat(config.lives().startingLives()).isEqualTo(5);
         assertThat(config.backupOnStart()).isTrue();
         assertThat(config.keepBackups()).isEqualTo(3);
         assertThat(config.debug()).isTrue();
@@ -110,7 +111,7 @@ class ConfigParserTest {
         ConfigResult result = ConfigParser.parse(values);
 
         assertThat(result.valid()).isTrue();
-        assertThat(result.config().startingLives()).isEqualTo(3);
+        assertThat(result.config().lives().startingLives()).isEqualTo(3);
         assertThat(result.config().keepBackups()).isEqualTo(10);
     }
 
@@ -204,5 +205,88 @@ class ConfigParserTest {
         ConfigResult result = ConfigParser.parse(values);
 
         assertThat(result.valid()).isFalse();
+    }
+
+    // ------------------------------------------------------------------- limbo section
+
+    @Test
+    void readsTheLimboSection() {
+        Map<String, Object> values = valid();
+        values.put("limbo.world-name", "the_grey");
+        values.put("limbo.border-radius", 2000);
+        values.put("limbo.revival-lives", 1);
+        values.put("limbo.whisper-chance", 0.4);
+        values.put("limbo.ghost-visit-seconds", 120);
+        values.put("limbo.ghost-cooldown-seconds", 600);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        LimboSettings limbo = result.config().limbo();
+        assertThat(limbo.worldName()).isEqualTo("the_grey");
+        assertThat(limbo.borderRadius()).isEqualTo(2000);
+        assertThat(limbo.revivalLives()).isEqualTo(1);
+        assertThat(limbo.whisperChance()).isEqualTo(0.4);
+        assertThat(limbo.ghostVisit().visitMillis()).isEqualTo(120_000L);
+        assertThat(limbo.ghostVisit().cooldownMillis()).isEqualTo(600_000L);
+    }
+
+    @Test
+    void ghostTimesAreGivenInSecondsAndStoredInMillis() {
+        // The file talks in seconds because that is what a human wants to type; everything
+        // downstream works in millis. Getting this conversion wrong by 1000 would turn a
+        // five minute visit into five seconds.
+        ConfigResult result = ConfigParser.parse(valid());
+
+        assertThat(result.config().limbo().ghostVisit().visitMillis()).isEqualTo(300_000L);
+        assertThat(result.config().limbo().ghostVisit().cooldownMillis()).isEqualTo(900_000L);
+    }
+
+    @Test
+    void rejectsAWorldNameThatWouldNotSurviveBeingADirectory() {
+        Map<String, Object> values = valid();
+        values.put("limbo.world-name", "../../etc/passwd");
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("limbo.world-name"));
+    }
+
+    @Test
+    void rejectsAWhisperChanceOutsideZeroToOne() {
+        Map<String, Object> values = valid();
+        values.put("limbo.whisper-chance", 1.5);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("limbo.whisper-chance"));
+    }
+
+    @Test
+    void rejectsReturningFromLimboWithNoLives() {
+        // Coming back with zero lives means the next scratch sends you straight back.
+        Map<String, Object> values = valid();
+        values.put("limbo.revival-lives", 0);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("limbo.revival-lives"));
+    }
+
+    @Test
+    void pvpDeathsCanBeSwitchedOff() {
+        Map<String, Object> values = valid();
+        values.put("lives.pvp-deaths-count", false);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().lives().pvpDeathsCount()).isFalse();
     }
 }

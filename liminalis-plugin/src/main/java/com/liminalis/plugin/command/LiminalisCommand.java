@@ -85,7 +85,7 @@ public final class LiminalisCommand {
         this.backupRunner = Objects.requireNonNull(backupRunner);
     }
 
-    public LiteralCommandNode<CommandSourceStack> build() {
+    public LiteralCommandNode<CommandSourceStack> build(LivesAndLimboCommands extra) {
         return Commands.literal("liminalis")
                 .requires(source -> source.getSender().hasPermission("liminalis.admin"))
                 .executes(this::showOverview)
@@ -93,6 +93,8 @@ public final class LiminalisCommand {
                 .then(profileTree())
                 .then(debugTree())
                 .then(dataTree())
+                .then(extra.livesTree())
+                .then(extra.limboTree())
                 .build();
     }
 
@@ -162,7 +164,7 @@ public final class LiminalisCommand {
         sender.sendMessage(field("id", profile.id().toString()));
         sender.sendMessage(field("status", online ? "online" : "offline"));
         sender.sendMessage(field("lives", profile.livesRemaining()
-                + " / " + config.get().startingLives()));
+                + " / " + config.get().lives().startingLives()));
         sender.sendMessage(field("deaths", Integer.toString(profile.totalDeaths())));
         sender.sendMessage(field("in limbo", Boolean.toString(profile.inLimbo())));
         sender.sendMessage(field("traits", joinOrNone(profile.traitIds())));
@@ -332,7 +334,7 @@ public final class LiminalisCommand {
         sender.sendMessage(Component.text("── Liminalis ──", ACCENT));
         sender.sendMessage(field("known profiles", Integer.toString(profiles.knownIds().size())));
         sender.sendMessage(field("resident", Integer.toString(profiles.residentProfiles().size())));
-        sender.sendMessage(field("starting lives", Integer.toString(config.get().startingLives())));
+        sender.sendMessage(field("starting lives", Integer.toString(config.get().lives().startingLives())));
 
         CombatSettings combat = config.get().combat();
         sender.sendMessage(field("pvp damage", "x" + combat.pvpDamageMultiplier()
@@ -342,7 +344,7 @@ public final class LiminalisCommand {
 
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
-                "Subcommands: reload, profile, debug, data", LABEL));
+                "Subcommands: reload, profile, debug, data, lives, limbo", LABEL));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -352,7 +354,7 @@ public final class LiminalisCommand {
         return source -> source.getSender().hasPermission(node);
     }
 
-    private SuggestionProvider<CommandSourceStack> knownPlayers() {
+    public SuggestionProvider<CommandSourceStack> knownPlayers() {
         return (context, builder) -> {
             String typed = builder.getRemainingLowerCase();
             for (String name : profiles.knownNames()) {

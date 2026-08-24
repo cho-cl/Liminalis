@@ -16,6 +16,8 @@ permissions:
       liminalis.admin.profile: true
       liminalis.admin.debug: true
       liminalis.admin.data: true
+      liminalis.admin.lives: true
+      liminalis.admin.limbo: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -27,4 +29,10 @@ permissions:
     default: op
   liminalis.admin.data:
     description: Save, inspect, back up and re-read profile files.
+    default: op
+  liminalis.admin.lives:
+    description: View and change how many lives a player has, and the PvP-deaths toggle.
+    default: op
+  liminalis.admin.limbo:
+    description: Send players to Limbo, revive them, and inspect who is trapped there.
     default: op

@@ -1,6 +1,7 @@
 package com.liminalis.plugin.injury;
 
 import com.liminalis.core.injury.DamageCategory;
+import com.liminalis.core.injury.InjuryCoverage;
 import com.liminalis.core.injury.InjurySeverity;
 import com.liminalis.plugin.modifier.capability.AttributeContribution;
 import com.liminalis.plugin.modifier.capability.AttributeSource;
@@ -8,7 +9,6 @@ import com.liminalis.plugin.modifier.capability.Ticking;
 import com.liminalis.plugin.trait.TraitTuning;
 import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -27,6 +27,14 @@ import java.util.function.BiFunction;
  * <p>Mortal wounds are the same shape with a far larger cost and no expiry. Until a healing
  * ability exists to treat one, the only way out is to spend a life and get a new body - which
  * is the trade the whole system is built around.
+ *
+ * <p><strong>Every damage category must appear at both severities</strong>, and
+ * {@link #validate(TraitTuning)} refuses to let the server start otherwise. That is not neatness. The
+ * classifier decides severity from the damage alone and never asks whether a matching wound
+ * exists, so a category with no mortal wound behind it meant the largest hits in the game
+ * were classified, found nothing to inflict, and did nothing at all - while smaller hits of
+ * the same kind wounded normally. Piercing had exactly that hole: a huge arrow left no mark
+ * where a glancing one drew blood.
  */
 public final class Injuries {
 
@@ -35,14 +43,40 @@ public final class Injuries {
 
     public static List<Injury> all(TraitTuning tuning) {
         return List.of(
+                // slashing / piercing
                 new Bleeding(tuning),
-                sprainedAnkle(tuning),
-                burns(tuning),
-                concussion(tuning),
                 puncturedLung(tuning),
                 lostArm(tuning),
+                impaled(tuning),
+                // falling / crushing
+                sprainedAnkle(tuning),
+                concussion(tuning),
                 brokenLegs(tuning),
-                charred(tuning));
+                // burning / explosive
+                burns(tuning),
+                charred(tuning),
+                // frost
+                frostbite(tuning),
+                frozenMarrow(tuning),
+                // withering
+                poisonedBlood(tuning),
+                rottingWound(tuning),
+                // everything else
+                shock(tuning),
+                failingBody(tuning));
+    }
+
+    /**
+     * Refuses a roster with a hole in it.
+     *
+     * <p>Called at startup. Failing loudly here costs one restart; failing silently costs a
+     * season of players wondering why the worst hit they ever took did nothing.
+     */
+    public static void validate(TraitTuning tuning) {
+        InjuryCoverage.require(all(tuning).stream()
+                .map(injury -> new InjuryCoverage.Entry(
+                        injury.id(), injury.causes(), injury.severity()))
+                .toList());
     }
 
     // ------------------------------------------------------------------ ordinary wounds
@@ -58,7 +92,7 @@ public final class Injuries {
         return new SimpleInjury("burns",
                 Set.of(DamageCategory.BURNING), InjurySeverity.INJURY, tuning, 300,
                 (t, player) -> List.of(AttributeContribution.add(Attribute.MAX_HEALTH,
-                        -safeHealthPenalty(player, t.get("burns.health-penalty", 4.0)))));
+                        -t.get("burns.health-penalty", 4.0))));
     }
 
     private static Injury concussion(TraitTuning tuning) {
@@ -82,6 +116,45 @@ public final class Injuries {
                                 -t.get("punctured_lung.speed-penalty", 0.10))));
     }
 
+    /** Numb hands: you can still fight and dig, just badly. */
+    private static Injury frostbite(TraitTuning tuning) {
+        return new SimpleInjury("frostbite",
+                Set.of(DamageCategory.FROST), InjurySeverity.INJURY, tuning, 240,
+                (t, player) -> List.of(
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("frostbite.attack-penalty", 1.5)),
+                        AttributeContribution.scale(Attribute.BLOCK_BREAK_SPEED,
+                                -t.get("frostbite.break-speed-penalty", 0.25))));
+    }
+
+    /** Whatever got into you is still in you. */
+    private static Injury poisonedBlood(TraitTuning tuning) {
+        return new SimpleInjury("poisoned_blood",
+                Set.of(DamageCategory.WITHERING), InjurySeverity.INJURY, tuning, 300,
+                (t, player) -> List.of(
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("poisoned_blood.attack-penalty", 1.5)),
+                        AttributeContribution.scale(Attribute.MOVEMENT_SPEED,
+                                -t.get("poisoned_blood.speed-penalty", 0.10))));
+    }
+
+    /**
+     * The generic answer to harm with no name of its own - drowning, starving, the void.
+     *
+     * <p>Deliberately unglamorous and deliberately present. Without a wound behind
+     * {@link DamageCategory#OTHER} the whole tail of Minecraft damage causes would classify
+     * and then inflict nothing, and every cause added in a future version would join them.
+     */
+    private static Injury shock(TraitTuning tuning) {
+        return new SimpleInjury("shock",
+                Set.of(DamageCategory.OTHER), InjurySeverity.INJURY, tuning, 180,
+                (t, player) -> List.of(
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("shock.attack-penalty", 1.0)),
+                        AttributeContribution.scale(Attribute.MOVEMENT_SPEED,
+                                -t.get("shock.speed-penalty", 0.10))));
+    }
+
     // -------------------------------------------------------------------- mortal wounds
 
     private static Injury lostArm(TraitTuning tuning) {
@@ -92,6 +165,22 @@ public final class Injuries {
                                 -t.get("lost_arm.attack-penalty", 3.0)),
                         AttributeContribution.scale(Attribute.BLOCK_BREAK_SPEED,
                                 -t.get("lost_arm.break-speed-penalty", 0.40))));
+    }
+
+    /**
+     * Something went through you and the hole never closed.
+     *
+     * <p>The wound piercing damage did not have. Before this, a mortal-severity arrow or
+     * trident was classified as maiming, found nothing in the roster, and left no mark at all.
+     */
+    private static Injury impaled(TraitTuning tuning) {
+        return new SimpleInjury("impaled",
+                Set.of(DamageCategory.PIERCING), InjurySeverity.MORTAL_WOUND, tuning, 0,
+                (t, player) -> List.of(
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("impaled.attack-penalty", 2.0)),
+                        AttributeContribution.scale(Attribute.MOVEMENT_SPEED,
+                                -t.get("impaled.speed-penalty", 0.15))));
     }
 
     private static Injury brokenLegs(TraitTuning tuning) {
@@ -110,7 +199,37 @@ public final class Injuries {
                 Set.of(DamageCategory.BURNING, DamageCategory.EXPLOSIVE),
                 InjurySeverity.MORTAL_WOUND, tuning, 0,
                 (t, player) -> List.of(AttributeContribution.add(Attribute.MAX_HEALTH,
-                        -safeHealthPenalty(player, t.get("charred.health-penalty", 8.0)))));
+                        -t.get("charred.health-penalty", 8.0))));
+    }
+
+    /** The cold got into the bone and stayed there. */
+    private static Injury frozenMarrow(TraitTuning tuning) {
+        return new SimpleInjury("frozen_marrow",
+                Set.of(DamageCategory.FROST), InjurySeverity.MORTAL_WOUND, tuning, 0,
+                (t, player) -> List.of(
+                        AttributeContribution.scale(Attribute.MOVEMENT_SPEED,
+                                -t.get("frozen_marrow.speed-penalty", 0.25)),
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("frozen_marrow.attack-penalty", 2.0))));
+    }
+
+    /** It is not healing. It is spreading. */
+    private static Injury rottingWound(TraitTuning tuning) {
+        return new SimpleInjury("rotting_wound",
+                Set.of(DamageCategory.WITHERING), InjurySeverity.MORTAL_WOUND, tuning, 0,
+                (t, player) -> List.of(AttributeContribution.add(Attribute.MAX_HEALTH,
+                        -t.get("rotting_wound.health-penalty", 4.0))));
+    }
+
+    /** Something inside stopped working properly and never started again. */
+    private static Injury failingBody(TraitTuning tuning) {
+        return new SimpleInjury("failing_body",
+                Set.of(DamageCategory.OTHER), InjurySeverity.MORTAL_WOUND, tuning, 0,
+                (t, player) -> List.of(
+                        AttributeContribution.add(Attribute.MAX_HEALTH,
+                                -t.get("failing_body.health-penalty", 4.0)),
+                        AttributeContribution.add(Attribute.ATTACK_DAMAGE,
+                                -t.get("failing_body.attack-penalty", 1.0))));
     }
 
     /**
@@ -205,18 +324,5 @@ public final class Injuries {
         public void onDetach(Player player) {
             sinceLastTick.remove(player.getUniqueId());
         }
-    }
-
-    /**
-     * Caps a max-health penalty so it can never take a player below a single heart.
-     *
-     * <p>Not theoretical: Burns and Charred can both be carried at once, and a large enough
-     * combined penalty would drive maximum health to zero and kill the player outright the
-     * instant the wound landed - which would look exactly like the plugin murdering them.
-     */
-    static double safeHealthPenalty(Player player, double penalty) {
-        AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
-        double base = maxHealth == null ? 20.0 : maxHealth.getBaseValue();
-        return Math.max(0.0, Math.min(penalty, base - 2.0));
     }
 }

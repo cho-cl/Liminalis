@@ -11,6 +11,7 @@ import com.liminalis.core.roll.WeightedEntry;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.modifier.Modifier;
+import com.liminalis.plugin.boon.BoonAssignment;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.modifier.ModifierType;
@@ -52,6 +53,7 @@ public final class FirstJoinService implements Listener {
     private final Messages messages;
     private final Debug debug;
     private final Random random = new Random();
+    private final BoonAssignment assignment;
 
     public FirstJoinService(JavaPlugin plugin,
                             ConfigService config,
@@ -67,6 +69,7 @@ public final class FirstJoinService implements Listener {
         this.modifiers = Objects.requireNonNull(modifiers, "modifiers");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
+        this.assignment = new BoonAssignment(this.registry);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -84,8 +87,10 @@ public final class FirstJoinService implements Listener {
         BoonOutcome boon = new BoonRoller(entriesOf(ModifierType.BLESSING),
                 entriesOf(ModifierType.CURSE)).roll(config.get().boons(), random);
         switch (boon.kind()) {
-            case BLESSING -> profile.setBlessingId(boon.id());
-            case CURSE -> profile.setCurseId(boon.id());
+            // Through BoonAssignment rather than set directly, so a boon that carries a life
+            // with it - Thrice-Born - grants it here as well as when an admin hands it over.
+            case BLESSING -> assignment.assign(profile, boon.id(), ModifierType.BLESSING);
+            case CURSE -> assignment.assign(profile, boon.id(), ModifierType.CURSE);
             case NONE -> {
                 // Most people. Nothing to record.
             }

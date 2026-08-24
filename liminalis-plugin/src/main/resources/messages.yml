@@ -140,40 +140,50 @@ boons:
   reveal-curse: "<dark_red>  Cursed: <name></dark_red><newline><dark_gray>    <description></dark_gray>"
 
 blessing:
-  ironblood:
-    name: "Ironblood"
-    description: "There is more of you to lose. Three hearts more."
-  far_wanderer:
-    name: "Far Wanderer"
-    description: "Distance means less to you than it does to other people."
-  steady_hand:
-    name: "Steady Hand"
-    description: "You have never missed anything you meant to hit."
-  thickskinned:
-    name: "Thick-Skinned"
-    description: "What armour you wear works harder than it should."
-  long_arms:
-    name: "Long Arms"
-    description: "You reach things other people have to step towards."
+  emberborn:
+    name: "Emberborn"
+    description: "Fire has never been able to find anything in you worth burning."
+  thrice_born:
+    name: "Thrice-Born"
+    description: "You were given one more turning than everyone else. A fourth life."
+  unbroken:
+    name: "Unbroken"
+    description: "Things that would take a limb from anyone else only ever cut you."
+  soulbound:
+    name: "Soulbound"
+    description: "What you carry stays yours through the dark. You wake up holding all of it."
+    kept: "<prefix><gold>Everything you were carrying came back with you.</gold>"
+  sunfed:
+    name: "Sunfed"
+    description: "Open sky and daylight are enough. You do not get hungry out here."
+  hearthbound:
+    name: "Hearthbound"
+    description: "People mend near you. You will never feel it happen, and they may never know why."
 
 curse:
   hollow:
     name: "Hollow"
     description: "Three hearts more than anyone, and heavy protection will not stay on you."
     refused: "<prefix><dark_red>The weight of it will not sit on you. Something in you refuses.</dark_red>"
-  unshod:
-    name: "Unshod"
-    description: "You move like something hunted. You will never wear boots again."
-    refused: "<prefix><dark_red>They will not stay on your feet.</dark_red>"
-  brittle:
-    name: "Brittle"
-    description: "You hit far harder than you should, and you break far more easily."
-  swiftbane:
-    name: "Swiftbane"
-    description: "Almost nothing can hurt you. You will never outrun anything again."
-  shallow_lungs:
-    name: "Shallow Lungs"
-    description: "Strength enough for anything but water. Do not go under."
+  untethered:
+    name: "Untethered"
+    description: "You can step into the grey whenever you like. No bed will ever catch you again."
+    not-yours: "<prefix><gray>You are still all the way here. The grey is not open to you.</gray>"
+    already-dead: "<prefix><gray>You are already on that side. Someone has to come for you.</gray>"
+    cooldown: "<prefix><gray>The way is closed to you for another <white><time></white>.</gray>"
+    no-bed: "<prefix><dark_purple><italic>You wake at the beginning again. You always will.</italic></dark_purple>"
+  sunless:
+    name: "Sunless"
+    description: "The dark is yours and nothing in it looks for you. The sun is not, and it burns."
+  bloodhungry:
+    name: "Bloodhungry"
+    description: "Nothing you eat and nothing you drink will mend you. Only killing does."
+  gluttonous:
+    name: "Gluttonous"
+    description: "A meal is worth four times what it should be, and you are always, always hungry."
+  marked:
+    name: "Marked"
+    description: "The Singularity gives up its books to you every time, because it knows where you are."
 
 # ---------------------------------------------------------------------------------------
 # Injuries
@@ -184,6 +194,7 @@ injuries:
   mortal: "<prefix><dark_red><bold><injury></bold></dark_red><newline><dark_gray>  <description></dark_gray>"
   healed: "<prefix><gray>Your <white><injury></white> has healed.</gray>"
   cleared-by-death: "<gray><italic>A new body. Whatever was wrong with the old one is not your problem now.</italic></gray>"
+  ward-held: "<prefix><gold>That should have cost you something you could not get back.</gold>"
 
 injury:
   bleeding:
@@ -201,6 +212,15 @@ injury:
   punctured_lung:
     name: "Punctured Lung"
     description: "Breathing is work now. Stay out of the water."
+  frostbite:
+    name: "Frostbite"
+    description: "You cannot feel your hands. They still work, after a fashion."
+  poisoned_blood:
+    name: "Poisoned Blood"
+    description: "Whatever got into you is still in you, and it is taking its time."
+  shock:
+    name: "Shock"
+    description: "Your body has not caught up with what just happened to it."
   lost_arm:
     name: "Lost Arm"
     description: "It is gone. You will not get it back in this body."
@@ -212,6 +232,18 @@ injury:
   charred:
     name: "Charred"
     description: "Most of you burned. What is left is not enough to take much more."
+  impaled:
+    name: "Impaled"
+    description: "Something went through you. The hole has decided to stay."
+  frozen_marrow:
+    name: "Frozen Marrow"
+    description: "The cold reached the bone and never left it. You have not been warm since."
+  rotting_wound:
+    name: "Rotting Wound"
+    description: "It is not closing. It is not going to close. It is getting wider."
+  failing_body:
+    name: "Failing Body"
+    description: "Something inside stopped working properly, and nothing has restarted it."
 
 # ---------------------------------------------------------------------------------------
 # The Singularity

@@ -13,6 +13,7 @@ import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.modifier.ModifierType;
+import com.liminalis.plugin.modifier.capability.MortalWard;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import org.bukkit.attribute.Attribute;
@@ -126,8 +127,31 @@ public final class InjuryService implements Listener {
         if (severity == InjurySeverity.NONE) {
             return;
         }
+        severity = soften(player, severity);
 
         inflict(player, profile, category, severity);
+    }
+
+    /**
+     * Downgrades a maiming blow for anyone who cannot be maimed.
+     *
+     * <p>Downgraded rather than cancelled. A blessing that turned the hardest hits in the game
+     * into nothing at all would make the Unbroken safest exactly when everyone else is in the
+     * most trouble, which is a stronger promise than intended - they should still come out of
+     * it bleeding, just still whole.
+     */
+    private InjurySeverity soften(Player player, InjurySeverity severity) {
+        if (severity != InjurySeverity.MORTAL_WOUND) {
+            return severity;
+        }
+        for (MortalWard ward : modifiers.capabilities(player, MortalWard.class)) {
+            if (ward.softensMortalWounds(player)) {
+                messages.send(player, "injuries.ward-held");
+                debug.log(() -> ward.id() + " softened a mortal wound on " + player.getName());
+                return InjurySeverity.INJURY;
+            }
+        }
+        return severity;
     }
 
     private void inflict(Player player, PlayerProfile profile,
@@ -274,22 +298,16 @@ public final class InjuryService implements Listener {
     }
 
     /**
-     * Reduces Minecraft's damage causes to the six kinds of harm that leave different marks.
+     * The kind of harm this blow did.
      *
-     * <p>Melee is split by what was in the attacker's hand, so "slashed by a sword" is
-     * literally true rather than an approximation - a mace or a fist crushes instead.
+     * <p>The table itself lives in {@link DamageCauses} so it can be read and checked without
+     * a server. Melee is the one answer that cannot be given by the cause alone: it is split
+     * by what was in the attacker's hand, so "slashed by a sword" is literally true rather
+     * than an approximation, and a mace or a bare fist crushes instead.
      */
     private DamageCategory categorise(EntityDamageEvent event) {
-        return switch (event.getCause()) {
-            case ENTITY_ATTACK, ENTITY_SWEEP_ATTACK -> meleeKind(event);
-            case PROJECTILE -> DamageCategory.PIERCING;
-            case FALL -> DamageCategory.FALLING;
-            case FIRE, FIRE_TICK, LAVA, HOT_FLOOR, CAMPFIRE, MELTING ->
-                    DamageCategory.BURNING;
-            case ENTITY_EXPLOSION, BLOCK_EXPLOSION -> DamageCategory.EXPLOSIVE;
-            case FALLING_BLOCK, CONTACT, FLY_INTO_WALL -> DamageCategory.CRUSHING;
-            default -> DamageCategory.OTHER;
-        };
+        DamageCategory fromCause = DamageCauses.categoryOf(event.getCause());
+        return fromCause != null ? fromCause : meleeKind(event);
     }
 
     private DamageCategory meleeKind(EntityDamageEvent event) {

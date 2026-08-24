@@ -4,7 +4,9 @@ import com.liminalis.core.limbo.GhostVisitRules;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.limbo.GhostVisitService;
 import com.liminalis.plugin.limbo.LimboService;
+import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
+import com.liminalis.plugin.rescue.RescueService;
 import com.liminalis.plugin.text.Messages;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
@@ -37,15 +39,21 @@ public final class LimboPlayerCommand {
     private final ProfileManager profiles;
     private final LimboService limbo;
     private final GhostVisitService ghosts;
+    private final RescueService rescue;
+    private final ModifierService modifiers;
     private final Messages messages;
 
     public LimboPlayerCommand(ProfileManager profiles,
                               LimboService limbo,
                               GhostVisitService ghosts,
+                              RescueService rescue,
+                              ModifierService modifiers,
                               Messages messages) {
         this.profiles = Objects.requireNonNull(profiles);
         this.limbo = Objects.requireNonNull(limbo);
         this.ghosts = Objects.requireNonNull(ghosts);
+        this.rescue = Objects.requireNonNull(rescue);
+        this.modifiers = Objects.requireNonNull(modifiers);
         this.messages = Objects.requireNonNull(messages);
     }
 
@@ -56,7 +64,34 @@ public final class LimboPlayerCommand {
                 .then(Commands.literal("visit").executes(this::visit))
                 .then(Commands.literal("return").executes(this::returnEarly))
                 .then(Commands.literal("who").executes(this::who))
+                .then(Commands.literal("cross").executes(this::cross))
                 .build();
+    }
+
+    /**
+     * {@code /limbo cross} - the Untethered walking in.
+     *
+     * <p>Lives on the player command rather than the admin tree because it belongs to
+     * whoever carries the curse, and sits beside {@code /limbo visit} deliberately: they are
+     * the same door, used from opposite sides.
+     *
+     * <p>Refused for anyone without the curse rather than hidden, so a player who has heard
+     * about it finds out why it is not for them instead of finding a command that silently
+     * does nothing.
+     */
+    private int cross(CommandContext<CommandSourceStack> context) {
+        Player player = player(context);
+        if (!modifiers.carries(player, "untethered")) {
+            messages.send(player, "curse.untethered.not-yours");
+            return Command.SINGLE_SUCCESS;
+        }
+        if (profiles.of(player).inLimbo()) {
+            // Already there. The way out is an expedition, not this.
+            messages.send(player, "curse.untethered.already-dead");
+            return Command.SINGLE_SUCCESS;
+        }
+        rescue.crossUntethered(player);
+        return Command.SINGLE_SUCCESS;
     }
 
     private int status(CommandContext<CommandSourceStack> context) {

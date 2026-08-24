@@ -4,8 +4,12 @@ import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.core.profile.ProfileModifierIds;
 import com.liminalis.plugin.modifier.capability.AttributeContribution;
 import com.liminalis.plugin.modifier.capability.AttributeSource;
+import com.liminalis.plugin.modifier.capability.DamageDealer;
+import com.liminalis.plugin.modifier.capability.DamageTaker;
 import com.liminalis.plugin.modifier.capability.DynamicAttributeSource;
+import com.liminalis.plugin.modifier.capability.HealingRule;
 import com.liminalis.plugin.modifier.capability.Restriction;
+import com.liminalis.plugin.modifier.capability.Slayer;
 import com.liminalis.plugin.modifier.capability.Ticking;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
@@ -19,6 +23,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -50,6 +60,9 @@ public final class ModifierService implements Listener {
 
     /** How often ticking modifiers run and dynamic attributes are recomputed. */
     private static final long TICK_INTERVAL = 10L;
+
+    /** One heart. No combination of wounds may take a player below this. */
+    private static final double MINIMUM_MAX_HEALTH = 2.0;
 
     private final JavaPlugin plugin;
     private final ModifierRegistry registry;
@@ -163,6 +176,39 @@ public final class ModifierService implements Listener {
             }
             applyContributions(player, modifier, contributions);
         }
+        enforceHealthFloor(player);
+    }
+
+    /**
+     * Stops the wounds a player is carrying from adding up to death.
+     *
+     * <p>Max-health penalties are the one contribution that can kill on its own, and they
+     * stack: Burns and Charred and a Rotting Wound at once is -16 before anything else, and
+     * the roster has more of them than that. Each wound clamping its own penalty is not
+     * enough - four penalties that are individually survivable are collectively fatal, and
+     * the player dies the instant the last one lands, which looks exactly like the plugin
+     * murdering them.
+     *
+     * <p>So the floor is enforced here, once, on the total. This runs after every
+     * contribution has been applied, reads what they actually came to, and gives back
+     * whatever it takes to leave one heart standing.
+     */
+    private void enforceHealthFloor(Player player) {
+        AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
+        if (maxHealth == null) {
+            return;
+        }
+        double shortfall = MINIMUM_MAX_HEALTH - maxHealth.getValue();
+        if (shortfall > 0) {
+            maxHealth.addModifier(new AttributeModifier(
+                    new NamespacedKey(plugin, "health-floor"),
+                    shortfall, AttributeModifier.Operation.ADD_NUMBER));
+        }
+        // Current health above the new maximum is refused by the server, so bring it down
+        // ourselves rather than letting the next setHealth call throw.
+        if (player.getHealth() > maxHealth.getValue()) {
+            player.setHealth(maxHealth.getValue());
+        }
     }
 
     private void applyContributions(Player player, Modifier modifier,
@@ -273,6 +319,130 @@ public final class ModifierService implements Listener {
                 + " due to " + restriction.id());
     }
 
+    // ---------------------------------------------------------------------------- damage
+
+    /**
+     * Lets attached modifiers rewrite damage in both directions.
+     *
+     * <p>Priority is load-bearing in both directions. {@code HIGHEST} rather than
+     * {@code HIGH} so it runs strictly after {@code CombatListener}, which halves PvP damage
+     * at {@code HIGH} - two handlers at the same priority run in registration order, which is
+     * not a thing to build a rule on. And well before {@code MONITOR}, where
+     * {@code InjuryService} reads the final figure, or a player made immune to fire would
+     * still be given burns by a blow that did nothing to them.
+     *
+     * <p>{@link DamageDealer} is dispatched from here too. It had existed since the modifier
+     * framework was built and nothing had ever called it - so any modifier implementing it
+     * would have compiled, attached, reported itself on the profile screen and quietly done
+     * nothing at all. An interface that is declared but never dispatched is a trap with a
+     * long fuse.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player victim) {
+            takeDamage(victim, event);
+        }
+        if (event instanceof EntityDamageByEntityEvent byEntity
+                && byEntity.getDamager() instanceof Player attacker
+                && !event.isCancelled()) {
+            dealDamage(attacker, byEntity);
+        }
+    }
+
+    private void takeDamage(Player victim, EntityDamageEvent event) {
+        double damage = event.getDamage();
+        for (Modifier modifier : attachedTo(victim)) {
+            if (!(modifier instanceof DamageTaker taker)) {
+                continue;
+            }
+            try {
+                damage = taker.adjustIncoming(victim, event, damage);
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Modifier '" + modifier.id()
+                        + "' threw adjusting damage to " + victim.getName(), e);
+            }
+        }
+        if (damage <= 0) {
+            // Cancelled outright rather than set to zero: a zero-damage blow still knocks
+            // you back, still flashes red and still counts as being hit. "Fire cannot hurt
+            // you" has to mean the fire does nothing, not that it does nothing visible.
+            event.setCancelled(true);
+            return;
+        }
+        if (damage != event.getDamage()) {
+            event.setDamage(damage);
+        }
+    }
+
+    private void dealDamage(Player attacker, EntityDamageByEntityEvent event) {
+        Entity victim = event.getEntity();
+        double damage = event.getDamage();
+        for (Modifier modifier : attachedTo(attacker)) {
+            if (!(modifier instanceof DamageDealer dealer)) {
+                continue;
+            }
+            try {
+                damage = dealer.adjustOutgoing(attacker, victim, damage);
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Modifier '" + modifier.id()
+                        + "' threw adjusting damage from " + attacker.getName(), e);
+            }
+        }
+        if (damage != event.getDamage()) {
+            event.setDamage(Math.max(0.0, damage));
+        }
+    }
+
+    /**
+     * Lets attached modifiers rewrite how their owner mends.
+     *
+     * <p>{@code HIGHEST}, so this runs strictly after the world-wide rules from Phase 1 have
+     * had their say rather than merely alongside them. A curse that quadruples what food
+     * gives back is then quadrupling the halved figure the server actually hands out, which
+     * is what a player would expect it to mean.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onRegainHealth(EntityRegainHealthEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        double amount = event.getAmount();
+        for (Modifier modifier : attachedTo(player)) {
+            if (!(modifier instanceof HealingRule rule)) {
+                continue;
+            }
+            try {
+                amount = rule.adjustHealing(player, event.getRegainReason(), amount);
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Modifier '" + modifier.id()
+                        + "' threw adjusting healing for " + player.getName(), e);
+            }
+        }
+        if (amount <= 0) {
+            event.setCancelled(true);
+        } else if (amount != event.getAmount()) {
+            event.setAmount(amount);
+        }
+    }
+
+    /** Tells attached modifiers when their owner has killed something. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onKill(EntityDeathEvent event) {
+        LivingEntity victim = event.getEntity();
+        Player killer = victim.getKiller();
+        if (killer == null || killer.equals(victim)) {
+            return;
+        }
+        for (Slayer slayer : capabilities(killer, Slayer.class)) {
+            try {
+                slayer.onKill(killer, victim);
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE, "Modifier '" + slayer.id()
+                        + "' threw on a kill by " + killer.getName(), e);
+            }
+        }
+    }
+
     // ----------------------------------------------------------------------------- tick
 
     private void tickEveryone() {
@@ -306,6 +476,35 @@ public final class ModifierService implements Listener {
 
     public List<Modifier> attachedTo(Player player) {
         return attached.getOrDefault(player.getUniqueId(), List.of());
+    }
+
+    /**
+     * Whether a player is carrying a particular modifier right now.
+     *
+     * <p>For the handful of systems that have to ask from outside the dispatch loop - the
+     * Singularity checking who its creatures should be drawn to, the injury service checking
+     * who cannot be maimed. Reads the attached list rather than the profile, so it answers
+     * "is this in effect" rather than "is this written down", which is the question every
+     * caller actually has.
+     */
+    public boolean carries(Player player, String modifierId) {
+        for (Modifier modifier : attachedTo(player)) {
+            if (modifier.id().equals(modifierId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Every attached modifier that has the given capability. */
+    public <T> List<T> capabilities(Player player, Class<T> capability) {
+        List<T> found = new ArrayList<>();
+        for (Modifier modifier : attachedTo(player)) {
+            if (capability.isInstance(modifier)) {
+                found.add(capability.cast(modifier));
+            }
+        }
+        return found;
     }
 
     private NamespacedKey keyFor(Modifier modifier, Attribute attribute, int index) {

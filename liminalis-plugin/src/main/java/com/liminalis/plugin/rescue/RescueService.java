@@ -5,7 +5,9 @@ import com.liminalis.core.rescue.CrossingOutcome;
 import com.liminalis.core.rescue.RescueRules;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
+import com.liminalis.plugin.boon.Curses;
 import com.liminalis.plugin.limbo.LimboService;
+import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.limbo.LimboWorld;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
@@ -59,6 +61,7 @@ public final class RescueService implements Listener {
     private final ProfileManager profiles;
     private final LimboService limbo;
     private final LimboWorld limboWorld;
+    private final ModifierRegistry registry;
     private final Messages messages;
     private final Debug debug;
 
@@ -71,6 +74,7 @@ public final class RescueService implements Listener {
                          ProfileManager profiles,
                          LimboService limbo,
                          LimboWorld limboWorld,
+                         ModifierRegistry registry,
                          Messages messages,
                          Debug debug) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -78,6 +82,7 @@ public final class RescueService implements Listener {
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.limbo = Objects.requireNonNull(limbo, "limbo");
         this.limboWorld = Objects.requireNonNull(limboWorld, "limboWorld");
+        this.registry = Objects.requireNonNull(registry, "registry");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
     }
@@ -122,29 +127,78 @@ public final class RescueService implements Listener {
             return;
         }
         event.setCancelled(true);
-        cross(player);
+        cross(player, true);
     }
 
-    private void cross(Player player) {
+    /**
+     * Opens a crossing for the Untethered, who need no stone to do it.
+     *
+     * <p>The gift half of that curse: the dead walk among the living for five minutes at a
+     * time, and this is the same door in the other direction. The danger is unchanged - the
+     * clock runs, the way out is the way in, and overstaying strands them there for good -
+     * which is why it needs no cost beyond the cooldown.
+     *
+     * @return true if a crossing opened; false if they were refused, having been told why
+     */
+    public boolean crossUntethered(Player player) {
+        PlayerProfile profile = profiles.of(player);
+        long now = System.currentTimeMillis();
+
+        if (profile.crossingCooldownUntil() > now) {
+            messages.send(player, "curse.untethered.cooldown", Messages.placeholder("time",
+                    describe(profile.crossingCooldownUntil() - now)));
+            return false;
+        }
+        if (!cross(player, false)) {
+            return false;
+        }
+        // Armed the moment the crossing opens rather than when it ends, so quitting halfway
+        // through is not a way to get a free one - the same rule ghost visits use.
+        profile.setCrossingCooldownUntil(now + untetheredCooldownMillis());
+        profiles.saveNow(profile);
+        return true;
+    }
+
+    private long untetheredCooldownMillis() {
+        Curses.Untethered untethered = registry.find("untethered")
+                .filter(Curses.Untethered.class::isInstance)
+                .map(Curses.Untethered.class::cast)
+                .orElse(null);
+        return (untethered == null ? 900L : untethered.cooldownSeconds()) * 1000L;
+    }
+
+    private static String describe(long millis) {
+        long seconds = millis / 1000L;
+        return seconds < 60 ? seconds + "s"
+                : (seconds / 60) + "m " + (seconds % 60) + "s";
+    }
+
+    /**
+     * @param consumeStone whether this crossing costs a Threshold Stone; false for the
+     *                     Untethered, who are the door
+     */
+    private boolean cross(Player player, boolean consumeStone) {
         PlayerProfile profile = profiles.of(player);
 
         if (!RescueRules.mayCross(profile)) {
             messages.send(player, "rescue.already-lost");
-            return;
+            return false;
         }
         if (crossings.containsKey(player.getUniqueId())) {
             messages.send(player, "rescue.already-crossed");
-            return;
+            return false;
         }
         if (!limboWorld.isReady()) {
             messages.send(player, "rescue.no-way-through");
-            return;
+            return false;
         }
 
         Location door = limboWorld.arrivalPoint();
         Location home = player.getLocation().clone();
 
-        player.getInventory().getItemInMainHand().subtract();
+        if (consumeStone) {
+            player.getInventory().getItemInMainHand().subtract();
+        }
         crossings.put(player.getUniqueId(), new Crossing(home, door,
                 System.currentTimeMillis() + crossingMillis()));
 
@@ -157,6 +211,7 @@ public final class RescueService implements Listener {
         // is severe enough that finding out by experiencing it would be unfair.
         messages.send(player, "rescue.warning");
         debug.log(() -> player.getName() + " crossed into Limbo");
+        return true;
     }
 
     private long crossingMillis() {

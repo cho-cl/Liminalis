@@ -80,6 +80,69 @@
       "chars": [
         "\ue009"
       ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/frostbite.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00a"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/poisoned_blood.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00b"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/shock.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00c"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/impaled.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00d"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/frozen_marrow.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00e"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/rotting_wound.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue00f"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/failing_body.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue010"
+      ]
     }
   ]
 }

@@ -8,6 +8,8 @@ import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.combat.PlayerDamageAttribution;
 import com.liminalis.plugin.config.ConfigService;
+import com.liminalis.plugin.modifier.ModifierService;
+import com.liminalis.plugin.modifier.capability.DeathBehaviour;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import org.bukkit.entity.LivingEntity;
@@ -34,17 +36,20 @@ public final class DeathListener implements Listener {
     private final JavaPlugin plugin;
     private final ConfigService config;
     private final ProfileManager profiles;
+    private final ModifierService modifiers;
     private final Messages messages;
     private final Debug debug;
 
     public DeathListener(JavaPlugin plugin,
                          ConfigService config,
                          ProfileManager profiles,
+                         ModifierService modifiers,
                          Messages messages,
                          Debug debug) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.config = Objects.requireNonNull(config, "config");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
+        this.modifiers = Objects.requireNonNull(modifiers, "modifiers");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
     }
@@ -53,6 +58,8 @@ public final class DeathListener implements Listener {
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         PlayerProfile profile = profiles.of(player);
+
+        applyDeathBehaviour(player, event);
 
         DeathCause cause = classify(player);
         DeathVerdict verdict = LifeRules.recordDeath(
@@ -71,6 +78,32 @@ public final class DeathListener implements Listener {
             case IGNORED -> {
                 // Nothing to say. An excused death should feel like nothing happened.
             }
+        }
+    }
+
+    /**
+     * Lets an attached modifier change what dying costs beyond the life itself.
+     *
+     * <p>Dispatched from here rather than from a listener of its own, for the same reason as
+     * everything else in the modifier framework: one handler, deterministic order, and a
+     * boon that never has to know the event exists.
+     *
+     * <p>Levels are kept alongside the inventory rather than separately. Coming back with
+     * your gear but none of your experience is a strange half-promise, and nobody reading
+     * "you keep what you were carrying" would expect it.
+     */
+    private void applyDeathBehaviour(Player player, PlayerDeathEvent event) {
+        for (DeathBehaviour behaviour : modifiers.capabilities(player, DeathBehaviour.class)) {
+            if (!behaviour.keepsInventory(player)) {
+                continue;
+            }
+            event.setKeepInventory(true);
+            event.getDrops().clear();
+            event.setKeepLevel(true);
+            event.setDroppedExp(0);
+            messages.send(player, "boon." + behaviour.id() + ".kept");
+            debug.log(() -> behaviour.id() + " kept the inventory of " + player.getName());
+            return;
         }
     }
 

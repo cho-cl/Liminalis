@@ -27,9 +27,10 @@ class ProfileCodecTest {
         p.setInLimbo(true);
         p.setLimboSince(1_700_000_000_000L);
         p.setGhostVisitCooldownUntil(1_700_000_900_000L);
+        p.setCrossingCooldownUntil(1_700_001_400_000L);
         p.addTrait("resilience");
         p.addTrait("short");
-        p.setBlessingId("ironblood");
+        p.setBlessingId("emberborn");
         p.setCurseId("hollow");
         p.addMark("mark_of_return");
         p.setAbilityId("priest");
@@ -38,6 +39,70 @@ class ProfileCodecTest {
         p.setFirstJoinedAt(1_699_000_000_000L);
         p.setLastSeenAt(1_700_000_500_000L);
         return p;
+    }
+
+    // ------------------------------------------------------------------ schema version 4
+
+    @Test
+    void aRetiredBlessingIsClearedRatherThanLeftDangling() {
+        // Version 4 removed the stat-only blessings. An id with no code behind it would sit
+        // in the profile forever, apply nothing, and still be announced on the profile
+        // screen as a blessing the player has - which is worse than having none.
+        PlayerProfile migrated = codec.fromJson(atVersion3("""
+                "blessingId": "ironblood","""));
+
+        assertThat(migrated.blessingId()).isNull();
+    }
+
+    @Test
+    void aRetiredCurseIsClearedToo() {
+        PlayerProfile migrated = codec.fromJson(atVersion3("""
+                "curseId": "swiftbane","""));
+
+        assertThat(migrated.curseId()).isNull();
+    }
+
+    @Test
+    void aBoonThatSurvivedTheCullIsLeftAlone() {
+        // Hollow was kept. Clearing it would be exactly the data loss this migration exists
+        // to avoid causing.
+        PlayerProfile migrated = codec.fromJson(atVersion3("""
+                "curseId": "hollow","""));
+
+        assertThat(migrated.curseId()).isEqualTo("hollow");
+    }
+
+    @Test
+    void migratingAnOldProfileKeepsEverythingElse() {
+        PlayerProfile migrated = codec.fromJson(atVersion3("""
+                "blessingId": "far_wanderer",
+                "traitIds": ["short", "fleet"],
+                "totalDeaths": 7,"""));
+
+        assertThat(migrated.blessingId()).isNull();
+        assertThat(migrated.traitIds()).containsExactlyInAnyOrder("short", "fleet");
+        assertThat(migrated.totalDeaths()).isEqualTo(7);
+        assertThat(migrated.livesRemaining()).isEqualTo(2);
+    }
+
+    @Test
+    void anOldProfileHasNoCrossingCooldown() {
+        // Absent reads as zero, which is "may cross now" - right for a profile written
+        // before crossings had a cooldown at all.
+        assertThat(codec.fromJson(atVersion3("")).crossingCooldownUntil()).isZero();
+    }
+
+    /** A version 3 document with whatever extra fields the test cares about spliced in. */
+    private static String atVersion3(String extraFields) {
+        return """
+                {
+                  "schemaVersion": 3,
+                  "id": "11111111-2222-3333-4444-555555555555",
+                  "lastKnownName": "Aero",
+                  "livesRemaining": 2,%s
+                  "markIds": []
+                }
+                """.formatted(extraFields);
     }
 
     @Test
@@ -53,8 +118,9 @@ class ProfileCodecTest {
         assertThat(restored.inLimbo()).isTrue();
         assertThat(restored.limboSince()).isEqualTo(1_700_000_000_000L);
         assertThat(restored.ghostVisitCooldownUntil()).isEqualTo(1_700_000_900_000L);
+        assertThat(restored.crossingCooldownUntil()).isEqualTo(1_700_001_400_000L);
         assertThat(restored.traitIds()).containsExactlyInAnyOrder("resilience", "short");
-        assertThat(restored.blessingId()).isEqualTo("ironblood");
+        assertThat(restored.blessingId()).isEqualTo("emberborn");
         assertThat(restored.curseId()).isEqualTo("hollow");
         assertThat(restored.markIds()).containsExactly("mark_of_return");
         assertThat(restored.abilityId()).isEqualTo("priest");

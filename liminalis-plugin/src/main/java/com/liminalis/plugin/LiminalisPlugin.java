@@ -123,13 +123,13 @@ public final class LiminalisPlugin extends JavaPlugin {
 
         registry = new ModifierRegistry();
         modifiers = new ModifierService(this, registry, profiles, messages);
-        limbo = new LimboService(this, profiles, limboWorld, messages, debug);
+        limbo = new LimboService(this, profiles, limboWorld, modifiers, messages, debug);
         ghosts = new GhostVisitService(this, config, profiles, limbo, messages, debug);
 
-        singularity = new SingularityService(this, config, profiles, limboWorld, messages, debug);
+        singularity = new SingularityService(this, config, profiles, limboWorld, registry, modifiers, messages, debug);
         registerModifiers();
         injuries = new InjuryService(this, config, profiles, registry, modifiers, messages, debug);
-        rescue = new RescueService(this, config, profiles, limbo, limboWorld, messages, debug);
+        rescue = new RescueService(this, config, profiles, limbo, limboWorld, registry, messages, debug);
         ThresholdStone.registerRecipe(this, messages);
         abilities = new AbilityService(this, config, profiles, registry, modifiers,
                 rescue, messages, debug);
@@ -144,7 +144,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new LimboChatListener(this, config, profiles, messages, debug), this);
         getServer().getPluginManager().registerEvents(
-                new DeathListener(this, config, profiles, messages, debug), this);
+                new DeathListener(this, config, profiles, modifiers, messages, debug), this);
         getServer().getPluginManager().registerEvents(new FirstJoinService(
                 this, config, profiles, registry, modifiers, messages, debug), this);
         getServer().getPluginManager().registerEvents(injuries, this);
@@ -163,6 +163,12 @@ public final class LiminalisPlugin extends JavaPlugin {
         // first one drops, so an unreadable page is a startup failure on the machine of
         // whoever wrote it instead of a mystery on a player's screen weeks later.
         LoreBooks.all();
+
+        // Same argument, sharper case. A damage category with no wound behind it produces a
+        // blow that is classified as maiming and then inflicts nothing at all, and there is
+        // no error, no log line and no way for a player to tell. Refusing to start is the
+        // only version of this failure anybody ever finds out about.
+        Injuries.validate(new TraitTuning(() -> config.get().traits().tuning()));
 
         registerCommands();
 
@@ -228,7 +234,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         LivesAndLimboCommands livesAndLimbo = new LivesAndLimboCommands(
                 config, profiles, limbo, audit, confirmations, command.knownPlayers());
         LimboPlayerCommand limboCommand =
-                new LimboPlayerCommand(profiles, limbo, ghosts, messages);
+                new LimboPlayerCommand(profiles, limbo, ghosts, rescue, modifiers, messages);
         ProfileCommand profileCommand =
                 new ProfileCommand(config, profiles, registry, messages);
         TraitCommands traitCommands = new TraitCommands(config, profiles, registry, modifiers,

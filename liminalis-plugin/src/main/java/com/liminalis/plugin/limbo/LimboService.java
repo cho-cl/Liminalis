@@ -2,6 +2,7 @@ package com.liminalis.plugin.limbo;
 
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.Debug;
+import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import org.bukkit.GameMode;
@@ -43,6 +44,7 @@ public final class LimboService implements Listener {
     private final JavaPlugin plugin;
     private final ProfileManager profiles;
     private final LimboWorld limboWorld;
+    private final ModifierService modifiers;
     private final Messages messages;
     private final Debug debug;
 
@@ -59,11 +61,13 @@ public final class LimboService implements Listener {
     public LimboService(JavaPlugin plugin,
                         ProfileManager profiles,
                         LimboWorld limboWorld,
+                        ModifierService modifiers,
                         Messages messages,
                         Debug debug) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.limboWorld = Objects.requireNonNull(limboWorld, "limboWorld");
+        this.modifiers = Objects.requireNonNull(modifiers, "modifiers");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
     }
@@ -279,8 +283,10 @@ public final class LimboService implements Listener {
     /** If they somehow die, they respawn in Limbo rather than in the world of the living. */
     @EventHandler(priority = EventPriority.HIGH)
     public void onRespawn(PlayerRespawnEvent event) {
-        if (profiles.resident(event.getPlayer().getUniqueId())
+        Player player = event.getPlayer();
+        if (profiles.resident(player.getUniqueId())
                 .filter(PlayerProfile::inLimbo).isEmpty()) {
+            refuseBed(event, player);
             return;
         }
         Location arrival = limboWorld.arrivalPoint();
@@ -288,4 +294,33 @@ public final class LimboService implements Listener {
             event.setRespawnLocation(arrival);
         }
     }
+
+    /**
+     * Sends the Untethered back to world spawn however far away they set a bed.
+     *
+     * <p>The cost half of that curse, and enforced here because respawn location is decided
+     * in exactly one place. Half of them is already somewhere else, so nowhere is home - and
+     * on a survival server where everyone builds a base an hour out, losing your bed is a far
+     * heavier price than any number would be.
+     *
+     * <p>The bed still works as a bed: they can sleep in it and skip the night. It simply
+     * will not catch them.
+     */
+    private void refuseBed(PlayerRespawnEvent event, Player player) {
+        if (!modifiers.carries(player, UNTETHERED)) {
+            return;
+        }
+        World overworld = plugin.getServer().getWorlds().stream()
+                .filter(world -> !limboWorld.is(world))
+                .findFirst()
+                .orElse(null);
+        if (overworld == null) {
+            return;
+        }
+        event.setRespawnLocation(overworld.getSpawnLocation());
+        messages.send(player, "curse.untethered.no-bed");
+    }
+
+    /** The curse that costs a player their bed. */
+    private static final String UNTETHERED = "untethered";
 }

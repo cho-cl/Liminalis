@@ -3,6 +3,7 @@ package com.liminalis.plugin.command;
 import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.boon.Boon;
+import com.liminalis.plugin.boon.BoonAssignment;
 import com.liminalis.plugin.modifier.Modifier;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
@@ -48,6 +49,7 @@ public final class BoonCommands {
 
     private final ProfileManager profiles;
     private final ModifierRegistry registry;
+    private final BoonAssignment assignment;
     private final ModifierService modifiers;
     private final Messages messages;
     private final AuditLog audit;
@@ -63,6 +65,7 @@ public final class BoonCommands {
                         SuggestionProvider<CommandSourceStack> playerNames) {
         this.profiles = Objects.requireNonNull(profiles);
         this.registry = Objects.requireNonNull(registry);
+        this.assignment = new BoonAssignment(this.registry);
         this.modifiers = Objects.requireNonNull(modifiers);
         this.messages = Objects.requireNonNull(messages);
         this.audit = Objects.requireNonNull(audit);
@@ -150,13 +153,10 @@ public final class BoonCommands {
         }
 
         String before = describeCurrent(profile);
-        if (boon.isCurse()) {
-            profile.setCurseId(boon.id());
-            profile.setBlessingId(null);
-        } else {
-            profile.setBlessingId(boon.id());
-            profile.setCurseId(null);
-        }
+        // Through BoonAssignment, so a boon carrying a life with it grants or revokes that
+        // life here exactly as it does on a first-join roll. Setting the id directly was
+        // fine while every boon was a stat; it stopped being fine the moment one was not.
+        assignment.assign(profile, boon.id(), boon.type());
         persist(profile);
 
         sender.sendMessage(Component.text(profile.lastKnownName() + ": " + before
@@ -189,11 +189,7 @@ public final class BoonCommands {
         }
 
         String before = describeCurrent(profile);
-        if (curse) {
-            profile.setCurseId(null);
-        } else {
-            profile.setBlessingId(null);
-        }
+        assignment.clear(profile, type);
         persist(profile);
 
         sender.sendMessage(Component.text("Cleared " + before + " from "

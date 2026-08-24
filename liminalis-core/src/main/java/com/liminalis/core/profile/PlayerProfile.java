@@ -35,6 +35,15 @@ public final class PlayerProfile {
     private long limboSince;
     private long ghostVisitCooldownUntil;
 
+    /**
+     * Epoch millis before which a living player may not open a crossing into Limbo.
+     *
+     * <p>The mirror of {@link #ghostVisitCooldownUntil}: that one paces the dead coming out,
+     * this one paces the Untethered going in. Persisted rather than kept in memory so a
+     * restart is not a way to skip it.
+     */
+    private long crossingCooldownUntil;
+
     private final Set<String> traitIds = new LinkedHashSet<>();
     private String blessingId;
     private String curseId;
@@ -126,6 +135,15 @@ public final class PlayerProfile {
 
     public void setGhostVisitCooldownUntil(long ghostVisitCooldownUntil) {
         this.ghostVisitCooldownUntil = ghostVisitCooldownUntil;
+    }
+
+    /** Epoch millis before which the next crossing into Limbo is refused. */
+    public long crossingCooldownUntil() {
+        return crossingCooldownUntil;
+    }
+
+    public void setCrossingCooldownUntil(long crossingCooldownUntil) {
+        this.crossingCooldownUntil = crossingCooldownUntil;
     }
 
     public Set<String> traitIds() {

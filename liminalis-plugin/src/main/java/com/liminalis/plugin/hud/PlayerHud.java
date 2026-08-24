@@ -52,15 +52,23 @@ public final class PlayerHud {
      * <p>Checked against the registry on startup, so adding an injury without an icon is a
      * named warning rather than an empty box nobody can explain.
      */
-    private static final Map<String, String> INJURY_GLYPHS = Map.of(
-            "bleeding", "\uE001",
-            "sprained_ankle", "\uE002",
-            "burns", "\uE003",
-            "concussion", "\uE004",
-            "punctured_lung", "\uE005",
-            "lost_arm", "\uE006",
-            "broken_legs", "\uE007",
-            "charred", "\uE008");
+    private static final Map<String, String> INJURY_GLYPHS = Map.ofEntries(
+            Map.entry("bleeding", "\uE001"),
+            Map.entry("sprained_ankle", "\uE002"),
+            Map.entry("burns", "\uE003"),
+            Map.entry("concussion", "\uE004"),
+            Map.entry("punctured_lung", "\uE005"),
+            Map.entry("lost_arm", "\uE006"),
+            Map.entry("broken_legs", "\uE007"),
+            Map.entry("charred", "\uE008"),
+            // U+E009 is the Singularity presence mark, which is not a wound.
+            Map.entry("frostbite", "\uE00A"),
+            Map.entry("poisoned_blood", "\uE00B"),
+            Map.entry("shock", "\uE00C"),
+            Map.entry("impaled", "\uE00D"),
+            Map.entry("frozen_marrow", "\uE00E"),
+            Map.entry("rotting_wound", "\uE00F"),
+            Map.entry("failing_body", "\uE010"));
 
     private static final String PRESENCE_GLYPH = "\uE009";
 

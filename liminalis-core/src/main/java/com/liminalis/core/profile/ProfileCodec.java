@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,7 +30,7 @@ import java.util.UUID;
  */
 public final class ProfileCodec {
 
-    public static final int CURRENT_SCHEMA_VERSION = 3;
+    public static final int CURRENT_SCHEMA_VERSION = 4;
 
     private static final String SCHEMA_VERSION = "schemaVersion";
     private static final String ID = "id";
@@ -39,6 +40,7 @@ public final class ProfileCodec {
     private static final String IN_LIMBO = "inLimbo";
     private static final String LIMBO_SINCE = "limboSince";
     private static final String GHOST_COOLDOWN_UNTIL = "ghostVisitCooldownUntil";
+    private static final String CROSSING_COOLDOWN_UNTIL = "crossingCooldownUntil";
     private static final String TRAIT_IDS = "traitIds";
     private static final String BLESSING_ID = "blessingId";
     private static final String CURSE_ID = "curseId";
@@ -72,6 +74,7 @@ public final class ProfileCodec {
         root.addProperty(IN_LIMBO, profile.inLimbo());
         root.addProperty(LIMBO_SINCE, profile.limboSince());
         root.addProperty(GHOST_COOLDOWN_UNTIL, profile.ghostVisitCooldownUntil());
+        root.addProperty(CROSSING_COOLDOWN_UNTIL, profile.crossingCooldownUntil());
 
         root.add(TRAIT_IDS, toArray(profile.traitIds()));
         root.addProperty(BLESSING_ID, profile.blessingId());
@@ -116,6 +119,7 @@ public final class ProfileCodec {
         profile.setInLimbo(optionalBoolean(root, IN_LIMBO));
         profile.setLimboSince(optionalLong(root, LIMBO_SINCE));
         profile.setGhostVisitCooldownUntil(optionalLong(root, GHOST_COOLDOWN_UNTIL));
+        profile.setCrossingCooldownUntil(optionalLong(root, CROSSING_COOLDOWN_UNTIL));
 
         profile.replaceTraits(optionalStringList(root, TRAIT_IDS));
         profile.setBlessingId(nullableString(root, BLESSING_ID));
@@ -157,11 +161,45 @@ public final class ProfileCodec {
                 // before the counters existed.
                 // fall through
             case 3:
+                // Version 4 retired the five stat-only blessings and four of the curses,
+                // replacing them with ones that change what a player can DO rather than what
+                // their numbers are. An id that no longer exists would sit in the profile
+                // forever, resolving to nothing, applying nothing, and showing up on the
+                // profile screen as a blessing the player does not actually have. Clearing
+                // it is the honest outcome: they are unblessed, and an admin can grant them
+                // one of the new ones.
+                clearRetiredBoons(root);
+                // fall through
+            case 4:
                 break;
             default:
                 throw new ProfileFormatException(
                         "no migration path from schema version " + fromVersion
                                 + " to " + CURRENT_SCHEMA_VERSION);
+        }
+    }
+
+    /**
+     * Boon ids this build no longer has any code for.
+     *
+     * <p>Deliberately different from how unknown <em>trait</em> ids are treated, which are
+     * left in place in case a build was rolled back. These are not missing by accident - they
+     * were removed on purpose and are never coming back, so leaving them would be leaving a
+     * player permanently holding nothing while being told they hold something.
+     */
+    private static final Set<String> RETIRED_BOONS = Set.of(
+            "ironblood", "far_wanderer", "steady_hand", "thickskinned", "long_arms",
+            "unshod", "brittle", "swiftbane", "shallow_lungs");
+
+    private static void clearRetiredBoons(JsonObject root) {
+        for (String field : List.of(BLESSING_ID, CURSE_ID)) {
+            if (!present(root, field)) {
+                continue;
+            }
+            JsonElement value = root.get(field);
+            if (value.isJsonPrimitive() && RETIRED_BOONS.contains(value.getAsString())) {
+                root.add(field, com.google.gson.JsonNull.INSTANCE);
+            }
         }
     }
 

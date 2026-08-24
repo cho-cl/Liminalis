@@ -5,6 +5,9 @@ import com.liminalis.core.singularity.SingularityRules;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.limbo.LimboWorld;
+import com.liminalis.plugin.boon.Curses;
+import com.liminalis.plugin.modifier.ModifierRegistry;
+import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import net.kyori.adventure.text.Component;
@@ -49,6 +52,8 @@ public final class SingularityService implements Listener {
     private final ConfigService config;
     private final ProfileManager profiles;
     private final LimboWorld limbo;
+    private final ModifierRegistry registry;
+    private final ModifierService modifiers;
     private final Messages messages;
     private final Debug debug;
     private final Random random = new Random();
@@ -59,12 +64,16 @@ public final class SingularityService implements Listener {
                               ConfigService config,
                               ProfileManager profiles,
                               LimboWorld limbo,
+                              ModifierRegistry registry,
+                              ModifierService modifiers,
                               Messages messages,
                               Debug debug) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.config = Objects.requireNonNull(config, "config");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.limbo = Objects.requireNonNull(limbo, "limbo");
+        this.registry = Objects.requireNonNull(registry, "registry");
+        this.modifiers = Objects.requireNonNull(modifiers, "modifiers");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
         this.markerKey = new NamespacedKey(plugin, "singularity_mob");
@@ -96,7 +105,7 @@ public final class SingularityService implements Listener {
 
         int placed = 0;
         for (int i = 0; i < count; i++) {
-            Player near = candidates.get(random.nextInt(candidates.size()));
+            Player near = chooseTarget(candidates);
             if (spawnNear(near, randomType()).isPresent()) {
                 placed++;
             }
@@ -105,6 +114,44 @@ public final class SingularityService implements Listener {
         debug.log(() -> "singularity wave: " + total + " of " + count + " placed near "
                 + candidates.size() + " eligible player(s)");
         return placed;
+    }
+
+    /**
+     * Picks who a creature is sent to, weighted toward the Marked.
+     *
+     * <p>The cost half of that curse, and the half that makes it a curse at all. Everyone
+     * else is an equal draw; a Marked player is worth several entries in the same hat, so
+     * over a season the thing that arrives every half hour arrives near them far more often
+     * than chance would ever explain. They will notice, and so will everyone standing next
+     * to them.
+     */
+    private Player chooseTarget(List<Player> candidates) {
+        double total = 0;
+        for (Player candidate : candidates) {
+            total += weightOf(candidate);
+        }
+        double roll = random.nextDouble() * total;
+        for (Player candidate : candidates) {
+            roll -= weightOf(candidate);
+            if (roll <= 0) {
+                return candidate;
+            }
+        }
+        // Floating-point drift only; the last candidate is as good an answer as any.
+        return candidates.get(candidates.size() - 1);
+    }
+
+    private double weightOf(Player player) {
+        Curses.Marked marked = markedCurse();
+        return marked != null && modifiers.carries(player, marked.id())
+                ? Math.max(1.0, marked.spawnWeight()) : 1.0;
+    }
+
+    private Curses.Marked markedCurse() {
+        return registry.find("marked")
+                .filter(Curses.Marked.class::isInstance)
+                .map(Curses.Marked.class::cast)
+                .orElse(null);
     }
 
     /**
@@ -273,7 +320,15 @@ public final class SingularityService implements Listener {
         event.getDrops().clear();
 
         var settings = config.get().singularity();
-        SingularityRules.rollBook(LoreBooks.asEntries(), settings.bookDropChance(), random)
+        Player killer = event.getEntity().getKiller();
+
+        // The Marked are given the book every time. The books are the only source of
+        // knowledge about any of this - what the grey is, how revival works - so a player
+        // who always gets one becomes the reason the server understands anything at all.
+        // That is the gift they are paying for by being hunted.
+        double bookChance = killer != null && modifiers.carries(killer, "marked")
+                ? 1.0 : settings.bookDropChance();
+        SingularityRules.rollBook(LoreBooks.asEntries(), bookChance, random)
                 .map(LoreBooks::byId)
                 .ifPresent(book -> event.getDrops().add(book.toItem()));
 
@@ -283,7 +338,6 @@ public final class SingularityService implements Listener {
             event.getDrops().add(SingularityResidue.create(plugin, messages, residue));
         }
 
-        Player killer = event.getEntity().getKiller();
         if (killer != null) {
             messages.send(killer, "singularity.slain",
                     Messages.placeholder("creature",

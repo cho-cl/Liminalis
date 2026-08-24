@@ -23,6 +23,7 @@ permissions:
       liminalis.admin.injury: true
       liminalis.admin.singularity: true
       liminalis.admin.ability: true
+      liminalis.admin.items: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -55,4 +56,7 @@ permissions:
     default: op
   liminalis.admin.ability:
     description: Grant, take, inspect and tier player abilities. Works on offline players.
+    default: op
+  liminalis.admin.items:
+    description: Open the menu of plugin items - residue, threshold stones, lore books.
     default: op

@@ -10,6 +10,9 @@ package com.liminalis.core.singularity;
  * @param maxDistance     furthest it may appear; beyond this it would simply never be found
  * @param minResidue      fewest shards of residue a creature leaves
  * @param maxResidue      most it leaves
+ * @param senseRange      how far away a player starts to feel one of these. Deliberately
+ *                        larger than the distance they spawn at, so the warning lands before
+ *                        the creature does rather than at the same moment
  */
 public record SingularitySettings(double chancePerPlayer,
                                   long intervalSeconds,
@@ -17,8 +20,9 @@ public record SingularitySettings(double chancePerPlayer,
                                   int minDistance,
                                   int maxDistance,
                                   int minResidue,
-                                  int maxResidue) {
+                                  int maxResidue,
+                                  double senseRange) {
 
     public static final SingularitySettings DEFAULTS =
-            new SingularitySettings(0.5, 1800L, 0.75, 24, 48, 1, 3);
+            new SingularitySettings(0.5, 1800L, 0.75, 24, 48, 1, 3, 40.0);
 }

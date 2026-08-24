@@ -67,7 +67,21 @@ public final class SingularityCommands {
                 .then(Commands.literal("list").executes(this::list))
                 .then(Commands.literal("forcewave").executes(this::forceWave))
                 .then(Commands.literal("spawn")
-                        .then(mobArgument().executes(this::spawn)))
+                        .then(mobArgument()
+                                .executes(context -> spawn(context, 1, null))
+                                .then(Commands.argument("count",
+                                                IntegerArgumentType.integer(1, 20))
+                                        .executes(context -> spawn(context,
+                                                IntegerArgumentType.getInteger(context, "count"),
+                                                null))
+                                        .then(Commands.argument("near",
+                                                        StringArgumentType.word())
+                                                .suggests(playerNames)
+                                                .executes(context -> spawn(context,
+                                                        IntegerArgumentType.getInteger(
+                                                                context, "count"),
+                                                        StringArgumentType.getString(
+                                                                context, "near")))))))
                 .then(Commands.literal("book")
                         .then(bookArgument().executes(this::giveBook)))
                 .then(Commands.literal("residue")
@@ -106,23 +120,53 @@ public final class SingularityCommands {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int spawn(CommandContext<CommandSourceStack> context) {
+    /**
+     * Puts creatures in the world.
+     *
+     * <p>Takes a count and an optional target so a fight can be staged without running the
+     * command eight times, and so an operator can drop something on somebody else without
+     * standing next to them. Both were sorely missed while testing the roster.
+     */
+    private int spawn(CommandContext<CommandSourceStack> context, int count, String targetName) {
         CommandSender sender = context.getSource().getSender();
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text(
-                    "Only a player can spawn one - it appears near you.", BAD));
-            return Command.SINGLE_SUCCESS;
-        }
         SingularityMob mob = mob(sender, context);
         if (mob == null) {
             return Command.SINGLE_SUCCESS;
         }
 
-        Optional<?> spawned = singularity.spawnNear(player, mob);
-        sender.sendMessage(spawned.isPresent()
-                ? Component.text("A " + mob.id() + " is nearby.", GOOD)
-                : Component.text("Found nowhere suitable to put it.", BAD));
-        audit.record(name(sender), "singularity.spawn", name(sender), null, mob.id());
+        Player target;
+        if (targetName != null) {
+            target = Bukkit.getPlayerExact(targetName);
+            if (target == null) {
+                sender.sendMessage(Component.text(targetName + " is not online.", BAD));
+                return Command.SINGLE_SUCCESS;
+            }
+        } else if (sender instanceof Player self) {
+            target = self;
+        } else {
+            sender.sendMessage(Component.text(
+                    "From console, name the player it should appear near.", BAD));
+            return Command.SINGLE_SUCCESS;
+        }
+
+        int placed = 0;
+        for (int i = 0; i < count; i++) {
+            if (singularity.spawnNear(target, mob).isPresent()) {
+                placed++;
+            }
+        }
+
+        if (placed == 0) {
+            sender.sendMessage(Component.text(
+                    "Found nowhere suitable near " + target.getName() + ".", BAD));
+        } else {
+            sender.sendMessage(Component.text(placed + "x " + mob.id()
+                    + " near " + target.getName()
+                    + (placed < count ? "  (" + (count - placed) + " had nowhere to go)" : ""),
+                    GOOD));
+        }
+        audit.record(name(sender), "singularity.spawn", target.getName(),
+                null, placed + "x " + mob.id());
         return Command.SINGLE_SUCCESS;
     }
 

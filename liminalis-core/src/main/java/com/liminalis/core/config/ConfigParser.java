@@ -188,7 +188,9 @@ public final class ConfigParser {
                 reader.wholeNumber("singularity.interval-seconds",
                         (int) defaults.intervalSeconds(), 30, 86_400),
                 reader.fraction("singularity.book-drop-chance", defaults.bookDropChance()),
-                minDistance, maxDistance, minResidue, maxResidue);
+                minDistance, maxDistance, minResidue, maxResidue,
+                reader.decimalRange("singularity.sense-range",
+                        defaults.senseRange(), 0.0, 256.0));
     }
 
     private static CombatSettings readCombat(Reader reader) {
@@ -248,6 +250,11 @@ public final class ConfigParser {
         /** A probability. */
         private double fraction(String path, double fallback) {
             return decimal(path, fallback, 0.0, 1.0);
+        }
+
+        /** Public-facing name for a bounded decimal, used where the bound is not 0..1. */
+        private double decimalRange(String path, double fallback, double min, double max) {
+            return decimal(path, fallback, min, max);
         }
 
         private double decimal(String path, double fallback, double min, double max) {

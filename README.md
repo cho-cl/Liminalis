@@ -29,6 +29,19 @@ mvn clean package          # tests + shaded jar at liminalis-plugin/target/Limin
 Requires JDK 21 and Maven. Gson is shaded and relocated into the jar, so the plugin does not
 depend on the server exposing its own copy.
 
+## Resource pack
+
+`pack/` holds the source; `python tools/build_pack.py` produces `dist/Liminalis-Pack.zip` and
+prints the sha1 for `server.properties`. The build is reproducible, so re-running it does not
+change the hash unless the content changed.
+
+It currently carries the injury HUD: eight icons bound to private-use codepoints and drawn by
+`InjuryHud`. Wounds show as icons on the action bar, mortal ones first and visually distinct.
+Players who decline the pack get the wound names as text instead.
+
+Singularity creature textures are *not* in it, for a reason recorded in `pack/README.md` - a
+pack cannot retexture only our zombies, and the route that works needs art.
+
 ## Conventions
 
 These are not style preferences — each one exists because of a specific failure it prevents.

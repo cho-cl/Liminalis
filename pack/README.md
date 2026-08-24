@@ -9,8 +9,10 @@ resource-pack=<url you host the zip at>
 resource-pack-sha1=<printed by the build script>
 ```
 
-**The hash changes on every rebuild.** If clients suddenly start getting kicked for a failed
-pack, that line is why.
+The build is reproducible: identical content produces an identical zip and therefore an
+identical hash, so re-running the script does not force you to re-paste anything. The hash
+changes when the pack actually changes - and then `resource-pack-sha1` must be updated, or
+`require-resource-pack` will kick every client.
 
 ## What is in it
 

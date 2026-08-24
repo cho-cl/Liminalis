@@ -25,6 +25,9 @@ PACK = ROOT / "pack"
 DIST = ROOT / "dist"
 NAME = "Liminalis-Pack.zip"
 
+# Any fixed date. The value is irrelevant; that it never moves is the point.
+FIXED_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
+
 # Never ship these even if they end up in the pack directory.
 EXCLUDE_SUFFIXES = {".md", ".xcf", ".psd", ".aseprite"}
 EXCLUDE_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
@@ -53,7 +56,17 @@ def build():
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
             # Relative to pack/, so pack.mcmeta lands at the archive root.
-            archive.write(path, path.relative_to(PACK).as_posix())
+            name = path.relative_to(PACK).as_posix()
+
+            # Fixed timestamp, so the archive is byte-identical when the content is.
+            # Zip entries carry mtimes, so writing them normally changes the sha1 on every
+            # rebuild even when nothing was edited - and with require-resource-pack on, a
+            # changed hash kicks every client until server.properties is updated. Nobody
+            # should have to re-paste a hash because they ran the build twice.
+            info = zipfile.ZipInfo(name, date_time=FIXED_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            archive.writestr(info, path.read_bytes())
 
     digest = hashlib.sha1(target.read_bytes()).hexdigest()
     size_kb = target.stat().st_size / 1024

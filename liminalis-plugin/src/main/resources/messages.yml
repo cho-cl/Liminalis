@@ -277,22 +277,56 @@ rescue:
 # ---------------------------------------------------------------------------------------
 
 ability:
-  granted: "<prefix><gradient:#c9d6e3:#8f7fbf><ability></gradient><newline><dark_gray>  <description></dark_gray>"
-  tier-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  Tier <tier>: <granted></white>"
+  granted: "<prefix><gradient:#c9d6e3:#8f7fbf><ability></gradient><newline><dark_gray>  <description></dark_gray><newline><gray>  Use it with </gray><white>/ability</white>"
+  tier-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  <tier>: <granted></white><newline><gray>  /ability <tier></gray>"
   fed: "<gray>The residue goes into it and does not come back. <white>+<amount></white></gray>"
   none-to-feed: "<gray>You have no ability for it to go into.</gray>"
   already-complete: "<gray>There is nothing left of it to open.</gray>"
 
+  none: "<gray>You have no ability. The Creator hands those out by request.</gray>"
+  no-such-power: "<gray>Your ability has nothing in slot <white><slot></white>.</gray>"
+  locked: "<gray>Slot <white><slot></white> opens at tier <white><tier></white>. Not yet.</gray>"
+  cooling: "<gray>Not yet. <white><seconds>s</white>.</gray>"
+  failed: "<red>Something went wrong. It has been logged.</red>"
+  no-target: "<gray>Look at someone first, or name them: </gray><white>/ability <slot> <player></white>"
+  no-such-player: "<gray><player> is not here.</gray>"
+  too-far: "<gray><player> is too far away.</gray>"
+
   priest:
     name: "Priest"
-    description: "You can put your hands on someone and make them better. Right-click, empty-handed."
-    tier1: "Lay hands on someone to heal them."
-    tier2: "Your blows carry holy weight against the undead."
-    tier3: "Sneak and right-click to close a mortal wound. Nothing else in the world can."
+    description: "You can put your hands on someone and make them better."
+    tier1: "Lay Hands"
+    tier2: "Mend Self"
+    tier3: "Holy Smite"
+    tier4: "Consecrate"
+    tier5: "Close the Wound"
+
+    lay_hands:
+      name: "Lay Hands"
+      description: "<dark_gray>Heal someone and close their lesser injuries.</dark_gray>"
+    mend_self:
+      name: "Mend Self"
+      description: "<dark_gray>Patch yourself up. Less than you can do for others.</dark_gray>"
+    holy_smite:
+      name: "Holy Smite"
+      description: "<dark_gray>Burn every undead thing standing near you.</dark_gray>"
+    consecrate:
+      name: "Consecrate"
+      description: "<dark_gray>Shield everyone around you for a moment.</dark_gray>"
+    close_the_wound:
+      name: "Close the Wound"
+      description: "<dark_gray>Undo a mortal wound. Nothing else in the world can.</dark_gray>"
+
     healed: "<gray>You lay hands on <white><player></white>.</gray>"
     healed-by: "<gray><white><player></white> lays hands on you. It helps.</gray>"
-    already-whole: "<gray><player> is not hurt.</gray>"
-    not-yet: "<gray>Not yet. <white><seconds>s</white>.</gray>"
+    injuries-closed: "<gray>Something closes over: <white><injuries></white></gray>"
+    already-whole: "<gray><player> has nothing you can mend.</gray>"
+    self-whole: "<gray>There is nothing wrong with you.</gray>"
+    mended: "<gray>You put yourself back together, mostly.</gray>"
+    nothing-to-smite: "<gray>Nothing here objects to you.</gray>"
+    smote: "<prefix><white>The light finds <count> of them.</white>"
+    consecrated: "<prefix><white>The ground is holy for a moment. <count> stand on it.</white>"
+    consecrated-by: "<gray><white><player></white> makes the ground holy beneath you.</gray>"
     nothing-to-treat: "<gray><player> has no mortal wound. Only those.</gray>"
     treated: "<prefix><white>You close the wound. It should not have been possible.</white>"
     treated-by: "<prefix><white><player> closes your wound.</white><gray> Whatever was taken is back.</gray>"

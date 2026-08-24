@@ -131,13 +131,26 @@ traits:
     broken_legs.jump-penalty: 0.50
     charred.health-penalty: 8.0
 
-    # The Priest. Tier 1 heals, tier 2 adds holy weight against the undead, tier 3
-    # closes mortal wounds - the only thing in the game that can, short of dying.
-    priest.heal-amount: 6.0
-    priest.heal-cooldown-seconds: 8
-    priest.tier2-healing-required: 200
-    priest.holy-damage: 4.0
-    priest.tier3-undead-required: 100
+    # The Priest - five powers, triggered with /ability 1 through 5.
+    # Slot number and tier are the same thing.
+    priest.lay-hands-heal: 6.0
+    priest.lay-hands-cooldown: 8
+    priest.mend-self-heal: 4.0
+    priest.mend-self-cooldown: 25
+    priest.smite-damage: 9.0
+    priest.smite-range: 6.0
+    priest.smite-cooldown: 20
+    priest.consecrate-range: 10.0
+    priest.consecrate-seconds: 12
+    priest.consecrate-cooldown: 60
+    priest.close-wound-cooldown: 300
+
+    # What opens each tier. Healing opens 2 and 3, felling undead opens 4 and 5,
+    # so nobody reaches the top by only ever doing the half they find easier.
+    priest.tier2-healing: 120
+    priest.tier3-healing: 300
+    priest.tier4-undead: 60
+    priest.tier5-undead: 150
 
 abilities:
   # How much progress one shard of Singularity residue buys toward the next tier.

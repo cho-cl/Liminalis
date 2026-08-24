@@ -26,8 +26,11 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Drives abilities: their progress, their tiers, and the residue that hurries them along.
@@ -47,6 +50,9 @@ public final class AbilityService implements Listener {
     private final RescueService rescue;
     private final Messages messages;
     private final Debug debug;
+
+    /** Per-player, per-power ready times. Transient by design. */
+    private final Map<UUID, Map<String, Long>> cooldowns = new ConcurrentHashMap<>();
 
     public AbilityService(JavaPlugin plugin,
                           ConfigService config,
@@ -68,61 +74,6 @@ public final class AbilityService implements Listener {
 
     // ---------------------------------------------------------------------------- using
 
-    /**
-     * Right-clicking another player: the Priest's whole interface.
-     *
-     * <p>Sneaking treats a mortal wound, plain right-click heals. Runs at {@code HIGH} and
-     * stands aside while the player is mid-rescue, so taking somebody's hand in the grey is
-     * never mistaken for laying hands on them.
-     */
-    @EventHandler(priority = EventPriority.HIGH)
-    public void onInteractPlayer(PlayerInteractEntityEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND
-                || rescue.isCrossed(event.getPlayer().getUniqueId())
-                || !(event.getRightClicked() instanceof Player target)) {
-            return;
-        }
-        Player user = event.getPlayer();
-        Optional<PriestAbility> priest = abilityOf(user, PriestAbility.class);
-        if (priest.isEmpty()) {
-            return;
-        }
-        // Bare-handed only, so a priest can still hand somebody an item.
-        if (!user.getInventory().getItemInMainHand().getType().isAir()) {
-            return;
-        }
-
-        int tier = tierOf(user);
-        boolean handled = user.isSneaking() && tier >= 3
-                ? priest.get().treat(user, target)
-                : priest.get().layHands(user, target);
-
-        if (handled) {
-            event.setCancelled(true);
-            checkForTierUp(user);
-        }
-    }
-
-    /** Holy weight behind a blow. */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onDealDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player attacker)) {
-            return;
-        }
-        for (Modifier modifier : modifiers.attachedTo(attacker)) {
-            if (!(modifier instanceof com.liminalis.plugin.modifier.capability.DamageDealer dealer)) {
-                continue;
-            }
-            double before = event.getDamage();
-            double after = dealer.adjustOutgoing(attacker, event.getEntity(), before);
-            if (after != before) {
-                event.setDamage(after);
-                debug.log(() -> attacker.getName() + " dealt " + before + " -> " + after
-                        + " via " + modifier.id());
-            }
-        }
-    }
-
     /** Credits a kill toward whatever the killer's ability counts. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onKill(EntityDeathEvent event) {
@@ -134,6 +85,61 @@ public final class AbilityService implements Listener {
         abilityOf(killer, PriestAbility.class)
                 .ifPresent(priest -> priest.recordFelled(killer, victim));
         checkForTierUp(killer);
+    }
+
+    // ---------------------------------------------------------------------------- firing
+
+    /**
+     * Runs a power, charging its cooldown only if it actually did something.
+     *
+     * <p>A power that refuses - nothing to smite, nobody hurt to heal - costs nothing. Making
+     * a misfire cost the cooldown would punish players for the plugin not telling them the
+     * state of the world.
+     */
+    public void fire(Player user, Ability ability, Power power, Player target) {
+        long remaining = cooldownRemaining(user, power);
+        if (remaining > 0) {
+            messages.send(user, "ability.cooling",
+                    Messages.placeholder("seconds", (int) remaining));
+            return;
+        }
+
+        boolean fired;
+        try {
+            fired = power.use(user, target);
+        } catch (RuntimeException e) {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                    "Power '" + power.id() + "' of ability '" + ability.id()
+                            + "' threw for " + user.getName(), e);
+            messages.send(user, "ability.failed");
+            return;
+        }
+
+        if (fired && power.cooldownSeconds() > 0) {
+            cooldowns.computeIfAbsent(user.getUniqueId(), id -> new ConcurrentHashMap<>())
+                    .put(power.id(), System.currentTimeMillis()
+                            + power.cooldownSeconds() * 1000L);
+        }
+        if (fired) {
+            checkForTierUp(user);
+        }
+    }
+
+    /** Seconds left on a power, or 0 if it is ready. */
+    public long cooldownRemaining(Player user, Power power) {
+        Map<String, Long> theirs = cooldowns.get(user.getUniqueId());
+        if (theirs == null) {
+            return 0;
+        }
+        long until = theirs.getOrDefault(power.id(), 0L);
+        long left = until - System.currentTimeMillis();
+        return left <= 0 ? 0 : (left + 999) / 1000;
+    }
+
+    /** Cooldowns are transient - a restart clearing them is not worth a profile field. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        cooldowns.remove(event.getPlayer().getUniqueId());
     }
 
     // ------------------------------------------------------------------------ accelerant

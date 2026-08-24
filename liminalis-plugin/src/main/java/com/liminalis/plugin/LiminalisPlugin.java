@@ -9,6 +9,7 @@ import com.liminalis.plugin.ability.PriestAbility;
 import com.liminalis.plugin.boon.Blessings;
 import com.liminalis.plugin.boon.Curses;
 import com.liminalis.plugin.combat.CombatListener;
+import com.liminalis.plugin.command.AbilityCommand;
 import com.liminalis.plugin.command.AbilityCommands;
 import com.liminalis.plugin.command.AuditLog;
 import com.liminalis.plugin.command.InjuryCommands;
@@ -26,6 +27,7 @@ import com.liminalis.plugin.hud.PlayerHud;
 import com.liminalis.plugin.injury.InjuryService;
 import com.liminalis.plugin.rescue.RescueService;
 import com.liminalis.plugin.rescue.ThresholdStone;
+import com.liminalis.plugin.singularity.LoreBooks;
 import com.liminalis.plugin.singularity.SingularityService;
 import com.liminalis.plugin.limbo.GhostVisitService;
 import com.liminalis.plugin.limbo.LimboChatListener;
@@ -152,6 +154,11 @@ public final class LiminalisPlugin extends JavaPlugin {
         rescue.start();
         hud.start();
 
+        // Validates every page fits a real book. Called here rather than left until the
+        // first one drops, so an unreadable page is a startup failure on the machine of
+        // whoever wrote it instead of a mystery on a player's screen weeks later.
+        LoreBooks.all();
+
         registerCommands();
 
         getLogger().info("Liminalis enabled - " + registry.size() + " modifier(s) registered.");
@@ -198,7 +205,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         Blessings.all(tuning).forEach(registry::register);
         Curses.all(tuning).forEach(registry::register);
         Injuries.all(tuning).forEach(registry::register);
-        registry.register(new PriestAbility(tuning, profiles, registry, messages));
+        registry.register(new PriestAbility(tuning, profiles, registry, modifiers, messages));
         registry.register(new MarkOfReturn(tuning, limbo));
     }
 
@@ -241,6 +248,9 @@ public final class LiminalisPlugin extends JavaPlugin {
             event.registrar().register(
                     profileCommand.build(),
                     "What you are");
+            event.registrar().register(
+                    new AbilityCommand(profiles, abilities, messages).build(),
+                    "Use your ability");
         });
     }
 

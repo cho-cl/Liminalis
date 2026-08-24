@@ -28,6 +28,22 @@ public interface Ability extends Modifier {
      */
     List<TierRequirement> tiers();
 
+    /**
+     * The five things this ability can do, in slot order.
+     *
+     * <p>Slot number and tier are the same thing, so a player who knows they are tier 3 knows
+     * that /ability 1, 2 and 3 work without having to look anything up.
+     *
+     * <p>Five is a deliberate floor as well as a ceiling. An ability with two powers is a
+     * perk, and the point of these is that each one is somebody's whole character.
+     */
+    List<Power> powers();
+
+    /** The power in a given slot, or empty if this ability has nothing there. */
+    default java.util.Optional<Power> power(int slot) {
+        return powers().stream().filter(p -> p.slot() == slot).findFirst();
+    }
+
     @Override
     default ModifierType type() {
         return ModifierType.ABILITY;

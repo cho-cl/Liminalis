@@ -315,8 +315,13 @@ def build_font():
         for name, cp in CODEPOINTS
     ]
     FONT.parent.mkdir(parents=True, exist_ok=True)
+    # Line endings are pinned to LF rather than left to the platform default. Python
+    # translates a newline to CRLF on Windows, git normalises the committed file back to LF,
+    # and the pack zip hashes whichever bytes are on disk - so without this the sha1 depends
+    # on whether you last ran this script or last cloned the repo, and two people building
+    # the same commit get two different hashes for identical content.
     FONT.write_text(json.dumps({"providers": providers}, indent=2, ensure_ascii=True) + chr(10),
-                    encoding="utf-8")
+                    encoding="utf-8", newline=chr(10))
 
 
 def check_coverage():

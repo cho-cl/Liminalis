@@ -57,4 +57,20 @@ public final class ConfigService {
         current = result.config();
         return List.of();
     }
+
+    /**
+     * Writes a single value into config.yml and reloads.
+     *
+     * <p>Used by the handful of settings an operator flips mid-session, so the change
+     * survives a restart. A runtime-only toggle would silently revert on the next reboot,
+     * and the first anyone would know is a player losing a life in a duel that was meant to
+     * be free.
+     *
+     * @return the problems found; empty means the change was saved and applied
+     */
+    public List<String> setAndSave(String path, Object value) {
+        plugin.getConfig().set(path, value);
+        plugin.saveConfig();
+        return reload();
+    }
 }

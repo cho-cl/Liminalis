@@ -12,6 +12,37 @@ lives:
   # Must be between 1 and 100.
   starting: 3
 
+  # Whether being killed by another player costs a life.
+  #
+  # Also toggleable in game with /liminalis lives pvpcounts on|off, which writes the
+  # change back here so it survives a restart.
+  #
+  # Note this is narrow on purpose: switching it off stops friends costing each other
+  # lives, and does nothing else. Lava, creepers and long falls still cost a life.
+  pvp-deaths-count: true
+
+limbo:
+  # The world Limbo lives in. Created on first startup as an endless pale garden with
+  # no caves, no structures and nothing alive in it. Letters, digits, _ and - only.
+  world-name: liminalis_limbo
+
+  # How far Limbo extends from its centre, in blocks. On foot this is effectively
+  # endless; the limit exists so one player walking in a straight line for a week
+  # cannot generate chunks forever.
+  border-radius: 5000
+
+  # How many lives someone comes back with when they are revived.
+  revival-lives: 2
+
+  # The chance that something said in Limbo is faintly heard by the living, worn down
+  # to the shape of a sentence. 0.0 silences the dead entirely; 1.0 relays everything.
+  whisper-chance: 0.15
+
+  # How long a ghost visit to the living world lasts, and how long after it ends before
+  # another can begin. Given in seconds; the cooldown runs from the END of the visit.
+  ghost-visit-seconds: 300
+  ghost-cooldown-seconds: 900
+
 storage:
   # Copy the players/ directory into backups/ every time the server starts.
   # Cheap insurance against a bad migration or a mistaken admin command.

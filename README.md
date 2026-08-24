@@ -72,16 +72,25 @@ mean a feature can be exercised on demand rather than waiting on a 30-minute spa
 
 ## Status
 
-**Phase 0 (foundation) and Phase 1 (world rules) complete.**
+**Phases 0 (foundation), 1 (world rules) and 2 (lives, death & Limbo) complete.**
 
-Phase 1 halves player-versus-player damage, halves healing from food, and buffs the
-Regeneration effect. Damage is traced back through projectiles, tamed pets and primed TNT to
-the player who actually caused it — halving only melee would not reduce fighting, it would
-just move it to bows and wolves. Each indirect source can be excluded in config.
+Phase 1 halves player-versus-player damage, halves healing from food, and buffs Regeneration.
+Damage is traced through projectiles, tamed pets and primed TNT to the player who really
+caused it, since halving only melee would move fighting to bows and wolves rather than reduce
+it. Each indirect source can be excluded in config.
 
-*Known gap:* end crystals and player-ignited creepers are not attributed, because neither can
-be traced to a player without tracking who placed them.
+Phase 2 gives everyone three lives. The third death sends them to **Limbo**: an endless pale
+garden with no caves, no structures and nothing alive in it. Nothing there can hurt you,
+hunger never drops, and there is no way out - portals, teleports, other plugins' warps and
+logging back in elsewhere are all refused. The dead talk only to each other, though what they
+say occasionally bleeds through to the living worn down to the shape of a sentence. Once every
+fifteen minutes they may spend five minutes among the living as an unseen spectator.
 
-Later phases — lives and Limbo, traits, blessings and curses, injuries, the Singularity,
-revival, abilities, the boss — are described in the design doc and built one at a time, each
-verified on a real server before the next.
+*Known gaps, both deliberate:* end crystals and player-ignited creepers are not attributed as
+player damage, because neither can be traced without tracking who placed them; and the third
+death drops your inventory in the overworld vanilla-style, so anyone revived later comes back
+with nothing.
+
+Later phases - traits, blessings and curses, injuries, the Singularity, revival, abilities,
+the boss - are described in the design doc and built one at a time, each verified on a real
+server before the next.

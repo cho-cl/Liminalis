@@ -6,8 +6,15 @@ import com.liminalis.core.profile.ProfileBackup;
 import com.liminalis.core.profile.ProfileStore;
 import com.liminalis.plugin.combat.CombatListener;
 import com.liminalis.plugin.command.AuditLog;
+import com.liminalis.plugin.command.LimboPlayerCommand;
 import com.liminalis.plugin.command.LiminalisCommand;
+import com.liminalis.plugin.command.LivesAndLimboCommands;
 import com.liminalis.plugin.config.ConfigService;
+import com.liminalis.plugin.limbo.GhostVisitService;
+import com.liminalis.plugin.limbo.LimboChatListener;
+import com.liminalis.plugin.limbo.LimboService;
+import com.liminalis.plugin.limbo.LimboWorld;
+import com.liminalis.plugin.lives.DeathListener;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
@@ -44,6 +51,9 @@ public final class LiminalisPlugin extends JavaPlugin {
     private ModifierService modifiers;
     private Debug debug;
     private Path playersDirectory;
+    private LimboWorld limboWorld;
+    private LimboService limbo;
+    private GhostVisitService ghosts;
 
     @Override
     public void onEnable() {
@@ -78,9 +88,20 @@ public final class LiminalisPlugin extends JavaPlugin {
         ModifierRegistry registry = new ModifierRegistry();
         modifiers = new ModifierService(this, registry, profiles);
 
+        limboWorld = new LimboWorld(this, config);
+        limboWorld.createOrLoad();
+        limbo = new LimboService(this, profiles, limboWorld, messages, debug);
+        ghosts = new GhostVisitService(this, config, profiles, limbo, messages, debug);
+
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
         getServer().getPluginManager().registerEvents(new CombatListener(config, debug), this);
+        getServer().getPluginManager().registerEvents(limbo, this);
+        getServer().getPluginManager().registerEvents(ghosts, this);
+        getServer().getPluginManager().registerEvents(
+                new LimboChatListener(this, config, profiles, messages, debug), this);
+        getServer().getPluginManager().registerEvents(
+                new DeathListener(this, config, profiles, messages, debug), this);
         modifiers.start();
 
         registerCommands(registry);
@@ -92,6 +113,9 @@ public final class LiminalisPlugin extends JavaPlugin {
     public void onDisable() {
         // Order matters: strip attribute modifiers before the profiles are flushed, so a
         // player's saved state never includes bonuses that only exist while we are running.
+        if (ghosts != null) {
+            ghosts.shutdown();
+        }
         if (modifiers != null) {
             modifiers.stop();
         }
@@ -108,12 +132,20 @@ public final class LiminalisPlugin extends JavaPlugin {
         LiminalisCommand command = new LiminalisCommand(
                 config, messages, profiles, modifiers, audit, confirmations, debug,
                 this::runBackup);
+        LivesAndLimboCommands livesAndLimbo = new LivesAndLimboCommands(
+                config, profiles, limbo, audit, confirmations, command.knownPlayers());
+        LimboPlayerCommand limboCommand =
+                new LimboPlayerCommand(profiles, limbo, ghosts, messages);
 
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
-                event.registrar().register(
-                        command.build(),
-                        "Liminalis administration",
-                        List.of("lim")));
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            event.registrar().register(
+                    command.build(livesAndLimbo),
+                    "Liminalis administration",
+                    List.of("lim"));
+            event.registrar().register(
+                    limboCommand.build(),
+                    "For those with no lives left");
+        });
     }
 
     private Optional<Path> runBackup() {

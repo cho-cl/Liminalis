@@ -5,21 +5,14 @@ import com.liminalis.core.combat.HealingKind;
 import com.liminalis.core.combat.PlayerDamageSource;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
-import org.bukkit.entity.AnimalTamer;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
-import org.bukkit.entity.TNTPrimed;
-import org.bukkit.entity.Tameable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
-import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * The three world rules: player-versus-player damage is halved, food heals half as much, and
@@ -50,7 +43,7 @@ public final class CombatListener implements Listener {
         if (!(event.getEntity() instanceof Player victim)) {
             return;
         }
-        PlayerDamageSource source = classify(event.getDamager(), victim);
+        PlayerDamageSource source = PlayerDamageAttribution.of(event.getDamager(), victim);
         if (source == PlayerDamageSource.NONE) {
             return;
         }
@@ -67,41 +60,6 @@ public final class CombatListener implements Listener {
         event.setDamage(after);
         debug.log(() -> String.format("pvp damage %s -> %s (%s, victim=%s)",
                 trim(before), trim(after), source, victim.getName()));
-    }
-
-    /**
-     * Traces damage back to a player, through whatever they used to deliver it.
-     *
-     * <p>Self-inflicted damage is deliberately not counted - shooting yourself with your own
-     * arrow is not two players fighting, and halving it would just be a strange gift.
-     */
-    private PlayerDamageSource classify(Entity damager, Player victim) {
-        if (damager instanceof Player attacker) {
-            return isSomeoneElse(attacker.getUniqueId(), victim)
-                    ? PlayerDamageSource.DIRECT : PlayerDamageSource.NONE;
-        }
-        if (damager instanceof Projectile projectile) {
-            ProjectileSource shooter = projectile.getShooter();
-            return shooter instanceof Player player && isSomeoneElse(player.getUniqueId(), victim)
-                    ? PlayerDamageSource.PROJECTILE : PlayerDamageSource.NONE;
-        }
-        if (damager instanceof Tameable pet && pet.isTamed()) {
-            AnimalTamer owner = pet.getOwner();
-            return owner != null && isSomeoneElse(owner.getUniqueId(), victim)
-                    ? PlayerDamageSource.PET : PlayerDamageSource.NONE;
-        }
-        if (damager instanceof TNTPrimed tnt) {
-            Entity primer = tnt.getSource();
-            return primer instanceof Player player && isSomeoneElse(player.getUniqueId(), victim)
-                    ? PlayerDamageSource.EXPLOSIVE : PlayerDamageSource.NONE;
-        }
-        // Not covered yet, because neither can be attributed without tracking who placed
-        // them: end crystals and creepers a player deliberately ignited.
-        return PlayerDamageSource.NONE;
-    }
-
-    private static boolean isSomeoneElse(UUID attacker, Player victim) {
-        return !victim.getUniqueId().equals(attacker);
     }
 
     // -------------------------------------------------------------------------- healing

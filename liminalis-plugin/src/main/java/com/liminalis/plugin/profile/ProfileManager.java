@@ -205,6 +205,16 @@ public final class ProfileManager implements Listener {
     }
 
     /**
+     * The profile of a connected player, or empty if they are not resident.
+     *
+     * <p>Touches no disk and never throws, so it is safe from async contexts such as chat,
+     * where the player may be part-way through disconnecting.
+     */
+    public Optional<PlayerProfile> resident(UUID id) {
+        return Optional.ofNullable(resident.get(id));
+    }
+
+    /**
      * The profile of anyone the server knows about, online or not.
      *
      * <p>Returns the live resident object when the player is connected, so an admin edit and
@@ -280,7 +290,7 @@ public final class ProfileManager implements Listener {
     }
 
     private PlayerProfile createFor(UUID id, String name) {
-        PlayerProfile profile = PlayerProfile.createNew(id, name, config.get().startingLives());
+        PlayerProfile profile = PlayerProfile.createNew(id, name, config.get().lives().startingLives());
         long now = System.currentTimeMillis();
         profile.setFirstJoinedAt(now);
         profile.setLastSeenAt(now);

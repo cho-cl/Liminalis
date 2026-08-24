@@ -1,12 +1,17 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0 (foundation) and 1 (world rules) complete, verified on a real 1.21.11
-> server. Phase 2 (lives, death & Limbo) is next. Each phase is built and verified in full
-> before the next one starts — see *Build phases* below.
+> **Status:** Phases 0 (foundation), 1 (world rules) and 2 (lives, death & Limbo) complete,
+> verified on a real 1.21.11 server. Phase 3 (traits) is next.
 >
-> Phase 1 carries one known gap: end crystals and player-ignited creepers are not yet
-> attributed as player damage, because neither can be traced to a player without tracking
-> who placed them. Everything else — melee, projectiles, pets, TNT — is covered.
+> **Limbo is an infinite pale garden**, which turned out better than the void expanse this
+> document originally described: the biome carries its own grey palette, dark fog, water tint
+> and ambient sound, all agreeing with each other, for free. Caves, structures and mobs are
+> generated off; difficulty is Peaceful; exhaustion is cancelled so saturation never drops.
+>
+> Known gaps, both deliberate:
+> - End crystals and player-ignited creepers are still not attributed as player damage.
+> - On the third death the player drops their inventory in the overworld, vanilla-style, so
+>   anyone revived later returns empty-handed.
 
 ## Context
 

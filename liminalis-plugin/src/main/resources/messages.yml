@@ -12,8 +12,50 @@
 prefix: "<dark_gray>[<gradient:#6f8faf:#c9d6e3>Liminalis</gradient><dark_gray>]</dark_gray> "
 
 # ---------------------------------------------------------------------------------------
-# Phase 0 has almost nothing to say yet. Lives, Limbo, traits, blessings, curses and
-# injuries each add their own section as they land.
+# Lives
+# ---------------------------------------------------------------------------------------
+
+lives:
+  spent: "<prefix><gray>A life is gone. <white><lives></white> remain.</gray>"
+  last-one: "<prefix><red>One life left.</red><gray> The next one is the last.</gray>"
+
+# ---------------------------------------------------------------------------------------
+# Limbo
+# ---------------------------------------------------------------------------------------
+
+limbo:
+  fell: "<gray><italic>The grey takes you. There is no pain here, and no way out.</italic></gray>"
+  fell-broadcast: "<dark_gray><italic><white><player></white> has spent their last life.</italic></dark_gray>"
+
+  contained: "<gray><italic>There is no way out of Limbo. Not like this.</italic></gray>"
+  returned-on-login: "<gray><italic>You are still here. Of course you are.</italic></gray>"
+  revived-while-away: "<white>Something reached in and pulled you out.</white>"
+
+  not-dead: "<gray>You are alive. This is not for you.</gray>"
+
+  # <player> and <message> are the speaker and what they said.
+  chat: "<dark_gray>[<gray>Limbo</gray>]</dark_gray> <white><player></white><dark_gray>:</dark_gray> <gray><message></gray>"
+
+  # What the living occasionally hear. The message arrives already worn away.
+  whisper: "<dark_gray><italic><message></italic></dark_gray>"
+
+# ---------------------------------------------------------------------------------------
+# Ghost visits
+# ---------------------------------------------------------------------------------------
+
+ghost:
+  begin: "<prefix><gray>You drift back among the living for <white><time></white>. They cannot see you.</gray>"
+  expired: "<gray><italic>The grey pulls you back.</italic></gray>"
+  ended: "<gray><italic>You let go, and return.</italic></gray>"
+  cooldown: "<prefix><gray>Not yet. You may walk again in <white><time></white>.</gray>"
+  only-the-dead: "<gray>Only the dead can do that.</gray>"
+  already-visiting: "<gray>You are already there.</gray>"
+  not-visiting: "<gray>You are in Limbo. There is nothing to return from.</gray>"
+  nowhere-to-go: "<prefix><red>There is nowhere to return to.</red>"
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: traits, blessings and curses, injuries,
+# the Singularity, revival, abilities.
 # ---------------------------------------------------------------------------------------
 
 profile:

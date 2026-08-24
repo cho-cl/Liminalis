@@ -1,5 +1,6 @@
 package com.liminalis.plugin.singularity;
 
+import com.liminalis.core.roll.WeightedPool;
 import com.liminalis.core.singularity.SingularityRules;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
@@ -126,9 +127,19 @@ public final class SingularityService implements Listener {
         return eligible;
     }
 
+    /**
+     * Picks what arrives.
+     *
+     * <p>Weighted rather than uniform, so the Herald stays the thing you tell people about
+     * and the Mote stays the thing you stop noticing. A uniform draw across eight creatures
+     * would make a Warden as common as a zombie, which would be a different server.
+     */
     private SingularityMob randomType() {
         List<SingularityMob> types = SingularityMob.all();
-        return types.get(random.nextInt(types.size()));
+        return WeightedPool.pick(types.stream().map(SingularityMob::asEntry).toList(),
+                        java.util.Set.of(), random)
+                .flatMap(id -> types.stream().filter(t -> t.id().equals(id)).findFirst())
+                .orElse(types.get(0));
     }
 
     // -------------------------------------------------------------------------- placing
@@ -168,6 +179,13 @@ public final class SingularityService implements Listener {
         AttributeInstance speed = entity.getAttribute(Attribute.MOVEMENT_SPEED);
         if (speed != null) {
             speed.setBaseValue(speed.getBaseValue() * type.speedScalar());
+        }
+
+        // Size is a first-class part of what a creature is here, not decoration. Applied as
+        // a base value so it survives anything else touching the attribute.
+        AttributeInstance scale = entity.getAttribute(Attribute.SCALE);
+        if (scale != null && type.scale() != 1.0) {
+            scale.setBaseValue(type.scale());
         }
 
         // These do not burn away at dawn. Something that only exists at night is a mob;

@@ -76,6 +76,21 @@ traits:
     stillness.heal-per-half-second: 0.35
     mark_of_return.sense-range: 24.0
 
+    # The rest of the ordinary roster.
+    tall.scale: 0.12
+    fleet.speed: 0.08
+    sure_footed.safe-fall: 6.0
+    heavy.knockback-resistance: 0.35
+    warm_blooded.burning-time: 0.50
+    waterborne.movement: 0.5
+    waterborne.mining: 0.4
+    dawnbound.max-attack: 2.5
+    duskbound.max-attack: 2.5
+
+    # Singularity tier.
+    liminal.range: 64.0
+    unseen.range: 24.0
+
     # Blessings - modest, and free.
     ironblood.health: 6.0
     far_wanderer.speed: 0.12

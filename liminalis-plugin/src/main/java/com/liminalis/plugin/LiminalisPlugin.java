@@ -37,6 +37,7 @@ import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import com.liminalis.plugin.trait.FirstJoinService;
 import com.liminalis.plugin.trait.MarkOfReturn;
+import com.liminalis.plugin.trait.MoreOrdinaryTraits;
 import com.liminalis.plugin.trait.OrdinaryTraits;
 import com.liminalis.plugin.trait.SingularityTraits;
 import com.liminalis.plugin.trait.TraitTuning;
@@ -120,9 +121,9 @@ public final class LiminalisPlugin extends JavaPlugin {
         limbo = new LimboService(this, profiles, limboWorld, messages, debug);
         ghosts = new GhostVisitService(this, config, profiles, limbo, messages, debug);
 
+        singularity = new SingularityService(this, config, profiles, limboWorld, messages, debug);
         registerModifiers();
         injuries = new InjuryService(this, config, profiles, registry, modifiers, messages, debug);
-        singularity = new SingularityService(this, config, profiles, limboWorld, messages, debug);
         rescue = new RescueService(this, config, profiles, limbo, limboWorld, messages, debug);
         ThresholdStone.registerRecipe(this, messages);
         abilities = new AbilityService(this, config, profiles, registry, modifiers,
@@ -191,7 +192,8 @@ public final class LiminalisPlugin extends JavaPlugin {
     private void registerModifiers() {
         TraitTuning tuning = new TraitTuning(() -> config.get().traits().tuning());
         OrdinaryTraits.all(tuning).forEach(registry::register);
-        SingularityTraits.all(tuning, limbo).forEach(registry::register);
+        MoreOrdinaryTraits.all(tuning).forEach(registry::register);
+        SingularityTraits.all(tuning, limbo, singularity).forEach(registry::register);
         Blessings.all(tuning).forEach(registry::register);
         Curses.all(tuning).forEach(registry::register);
         Injuries.all(tuning).forEach(registry::register);

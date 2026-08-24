@@ -5,6 +5,7 @@ import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
 import com.liminalis.core.roll.BoonRollSettings;
+import com.liminalis.core.singularity.SingularitySettings;
 
 /**
  * An immutable snapshot of every tunable value.
@@ -22,6 +23,7 @@ public record LiminalisConfig(
         TraitSettings traits,
         BoonRollSettings boons,
         InjurySettings injuries,
+        SingularitySettings singularity,
         boolean backupOnStart,
         int keepBackups,
         boolean debug) {
@@ -33,6 +35,7 @@ public record LiminalisConfig(
             TraitSettings.DEFAULTS,
             BoonRollSettings.DEFAULTS,
             InjurySettings.DEFAULTS,
+            SingularitySettings.DEFAULTS,
             true,
             10,
             false);

@@ -182,7 +182,25 @@ injury:
     description: "Most of you burned. What is left is not enough to take much more."
 
 # ---------------------------------------------------------------------------------------
-# Later phases add their own sections: the Singularity, revival, abilities.
+# The Singularity
+# ---------------------------------------------------------------------------------------
+
+singularity:
+  slain: "<prefix><gray>The <white><creature></white> stops.</gray>"
+
+  hollow_one:
+    name: "<gray>Hollow One</gray>"
+  watcher:
+    name: "<gray>Watcher</gray>"
+  remnant:
+    name: "<gray>Remnant</gray>"
+
+  residue:
+    name: "<dark_aqua>Residue</dark_aqua>"
+    lore: "<dark_gray>What is left when one of them stops.</dark_gray>"
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: revival, abilities.
 # ---------------------------------------------------------------------------------------
 
 profile:

@@ -7,6 +7,7 @@ import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
 import com.liminalis.core.roll.BoonRollSettings;
 import com.liminalis.core.roll.TraitRollSettings;
+import com.liminalis.core.singularity.SingularitySettings;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -43,6 +44,7 @@ public final class ConfigParser {
         TraitSettings traits = readTraits(reader);
         BoonRollSettings boons = readBoons(reader);
         InjurySettings injuries = readInjuries(reader);
+        SingularitySettings singularity = readSingularity(reader);
 
         boolean backupOnStart = reader.flag("storage.backup-on-start",
                 LiminalisConfig.DEFAULTS.backupOnStart());
@@ -56,7 +58,7 @@ public final class ConfigParser {
             return ConfigResult.failed(reader.errors);
         }
         return ConfigResult.ok(new LiminalisConfig(
-                lives, limbo, combat, traits, boons, injuries,
+                lives, limbo, combat, traits, boons, injuries, singularity,
                 backupOnStart, keepBackups, debug));
     }
 
@@ -141,6 +143,44 @@ public final class ConfigParser {
                 reader.fraction("injuries.mortal-chance", defaults.mortalChance()),
                 reader.multiplier("injuries.regeneration-speedup",
                         defaults.regenerationSpeedup()));
+    }
+
+    /**
+     * Wave frequency, placement and drops.
+     *
+     * <p>The two distance bounds are checked against each other. Reversed, every attempt to
+     * find a spot would fail silently and the Singularity would simply never appear - which
+     * would look like a broken feature rather than a bad number.
+     */
+    private static SingularitySettings readSingularity(Reader reader) {
+        SingularitySettings defaults = SingularitySettings.DEFAULTS;
+
+        int minDistance = reader.wholeNumber("singularity.min-distance",
+                defaults.minDistance(), 8, 128);
+        int maxDistance = reader.wholeNumber("singularity.max-distance",
+                defaults.maxDistance(), 8, 256);
+        if (maxDistance < minDistance) {
+            reader.errors.add("singularity.max-distance: must be at least"
+                    + " singularity.min-distance (" + minDistance + ") but was "
+                    + maxDistance);
+        }
+
+        int minResidue = reader.wholeNumber("singularity.min-residue",
+                defaults.minResidue(), 0, 64);
+        int maxResidue = reader.wholeNumber("singularity.max-residue",
+                defaults.maxResidue(), 0, 64);
+        if (maxResidue < minResidue) {
+            reader.errors.add("singularity.max-residue: must be at least"
+                    + " singularity.min-residue (" + minResidue + ") but was "
+                    + maxResidue);
+        }
+
+        return new SingularitySettings(
+                reader.fraction("singularity.chance-per-player", defaults.chancePerPlayer()),
+                reader.wholeNumber("singularity.interval-seconds",
+                        (int) defaults.intervalSeconds(), 30, 86_400),
+                reader.fraction("singularity.book-drop-chance", defaults.bookDropChance()),
+                minDistance, maxDistance, minResidue, maxResidue);
     }
 
     private static CombatSettings readCombat(Reader reader) {

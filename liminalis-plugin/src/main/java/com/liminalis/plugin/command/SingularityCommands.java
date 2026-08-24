@@ -79,9 +79,14 @@ public final class SingularityCommands {
         CommandSender sender = context.getSource().getSender();
         sender.sendMessage(Component.text("-- Creatures --", ACCENT));
         for (SingularityMob mob : SingularityMob.all()) {
+            // Scale and weight shown because they are what you actually reach for when
+            // something is appearing too often or looming too large.
             sender.sendMessage(Component.text("  " + mob.id(), VALUE)
-                    .append(Component.text("  " + mob.base() + ", " + mob.maxHealth() + "hp, "
-                            + mob.attackDamage() + "dmg", LABEL)));
+                    .append(Component.text("  " + mob.base()
+                            + "  x" + mob.scale() + " scale"
+                            + "  " + mob.maxHealth() + "hp"
+                            + "  " + mob.attackDamage() + "dmg"
+                            + "  weight " + mob.weight(), LABEL)));
         }
         sender.sendMessage(Component.text("-- Books --", ACCENT));
         for (LoreBooks.LoreBook book : LoreBooks.all()) {

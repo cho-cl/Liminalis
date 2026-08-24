@@ -92,6 +92,36 @@ trait:
   stillness:
     name: "Stillness"
     description: "Your wounds close only while you do not move at all."
+  tall:
+    name: "Tall"
+    description: "You see over things other people have to walk around."
+  fleet:
+    name: "Fleet"
+    description: "You have always been the one who gets there first."
+  sure_footed:
+    name: "Sure-Footed"
+    description: "Drops that would break someone else barely register."
+  heavy:
+    name: "Heavy"
+    description: "Things hit you and you do not go anywhere."
+  warm_blooded:
+    name: "Warm-Blooded"
+    description: "Fire finds less of you to hold on to."
+  waterborne:
+    name: "Waterborne"
+    description: "You move through water like something that belongs in it."
+  dawnbound:
+    name: "Dawnbound"
+    description: "You are at your best in full sun, and ordinary once it sets."
+  duskbound:
+    name: "Duskbound"
+    description: "The light going is the moment you start to matter."
+  liminal:
+    name: "Liminal"
+    description: "You can see what came through the door, long before it reaches you."
+  unseen:
+    name: "Unseen"
+    description: "Stand perfectly still and things stop finding you worth looking at."
 
 mark:
   mark_of_return:
@@ -194,6 +224,16 @@ singularity:
     name: "<gray>Watcher</gray>"
   remnant:
     name: "<gray>Remnant</gray>"
+  the_tall:
+    name: "<gray>The Tall</gray>"
+  carrion:
+    name: "<gray>Carrion</gray>"
+  mote:
+    name: "<gray>Mote</gray>"
+  crawler:
+    name: "<gray>Crawler</gray>"
+  herald:
+    name: "<dark_gray>Herald</dark_gray>"
 
   residue:
     name: "<dark_aqua>Residue</dark_aqua>"

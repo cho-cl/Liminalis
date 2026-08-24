@@ -2,11 +2,14 @@ package com.liminalis.plugin.trait;
 
 import com.liminalis.core.roll.TraitTier;
 import com.liminalis.plugin.limbo.LimboService;
+import com.liminalis.plugin.singularity.SingularityService;
 import com.liminalis.plugin.modifier.capability.Ticking;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -26,8 +29,141 @@ public final class SingularityTraits {
     private SingularityTraits() {
     }
 
-    public static List<Trait> all(TraitTuning tuning, LimboService limbo) {
-        return List.of(new Deathsight(tuning, limbo), new Stillness(tuning));
+    public static List<Trait> all(TraitTuning tuning, LimboService limbo,
+                                  SingularityService singularity) {
+        return List.of(
+                new Deathsight(tuning, limbo),
+                new Stillness(tuning),
+                new Liminal(tuning, singularity),
+                new Unseen(tuning));
+    }
+
+    /**
+     * Sees what the Singularity sends, before it is close enough to see you.
+     *
+     * <p>The counterpart to Deathsight: that one shows you the dead, this one shows you what
+     * came through the door. Marks every Singularity creature within range for its holder
+     * alone, which turns them from the person who gets ambushed into the person who says
+     * "there is something over that hill" and is believed.
+     */
+    public static final class Liminal implements Trait, Ticking {
+
+        private final TraitTuning tuning;
+        private final SingularityService singularity;
+
+        Liminal(TraitTuning tuning, SingularityService singularity) {
+            this.tuning = Objects.requireNonNull(tuning, "tuning");
+            this.singularity = Objects.requireNonNull(singularity, "singularity");
+        }
+
+        @Override
+        public String id() {
+            return "liminal";
+        }
+
+        @Override
+        public TraitTier tier() {
+            return TraitTier.SINGULARITY;
+        }
+
+        @Override
+        public void tick(Player player) {
+            double range = tuning.get("liminal.range", 64.0);
+            for (Entity nearby : player.getNearbyEntities(range, range, range)) {
+                if (singularity.typeIdOf(nearby) == null) {
+                    continue;
+                }
+                // Sent to this player alone. Everyone else sees an empty hillside.
+                player.spawnParticle(Particle.SCULK_SOUL,
+                        nearby.getLocation().add(0, nearby.getHeight() + 0.4, 0),
+                        3, 0.2, 0.2, 0.2, 0.0);
+            }
+        }
+    }
+
+    /**
+     * Stops being worth looking at, so long as you stop moving.
+     *
+     * <p>Hostile things lose their hold on someone standing perfectly still. It rewards a
+     * nerve most players do not have - the instinct when something is coming is to run, and
+     * this trait asks its holder to do the opposite and be right about it.
+     *
+     * <p>Deliberately does not work on the Singularity. Whatever is sending those did not
+     * decide to come for you by looking.
+     */
+    public static final class Unseen implements Trait, Ticking {
+
+        private static final int INTERVALS_BEFORE_HIDDEN = 3;
+
+        private final TraitTuning tuning;
+        private final Map<UUID, StillWatch> watches = new ConcurrentHashMap<>();
+
+        Unseen(TraitTuning tuning) {
+            this.tuning = Objects.requireNonNull(tuning, "tuning");
+        }
+
+        @Override
+        public String id() {
+            return "unseen";
+        }
+
+        @Override
+        public TraitTier tier() {
+            return TraitTier.SINGULARITY;
+        }
+
+        @Override
+        public void tick(Player player) {
+            StillWatch watch = watches.computeIfAbsent(
+                    player.getUniqueId(), id -> new StillWatch());
+            Location now = player.getLocation();
+
+            if (!watch.isSamePlaceAs(now)) {
+                watch.reset(now);
+                return;
+            }
+            if (++watch.intervals < INTERVALS_BEFORE_HIDDEN) {
+                return;
+            }
+
+            double range = tuning.get("unseen.range", 24.0);
+            for (Entity nearby : player.getNearbyEntities(range, range, range)) {
+                if (!(nearby instanceof Mob mob) || !player.equals(mob.getTarget())) {
+                    continue;
+                }
+                mob.setTarget(null);
+                player.spawnParticle(Particle.SMOKE,
+                        now.clone().add(0, 1.0, 0), 2, 0.2, 0.3, 0.2, 0.0);
+            }
+        }
+
+        @Override
+        public void onDetach(Player player) {
+            watches.remove(player.getUniqueId());
+        }
+
+        private static final class StillWatch {
+
+            private int intervals;
+            private int blockX;
+            private int blockY;
+            private int blockZ;
+            private boolean seeded;
+
+            private boolean isSamePlaceAs(Location location) {
+                return seeded && blockX == location.getBlockX()
+                        && blockY == location.getBlockY()
+                        && blockZ == location.getBlockZ();
+            }
+
+            private void reset(Location location) {
+                seeded = true;
+                intervals = 0;
+                blockX = location.getBlockX();
+                blockY = location.getBlockY();
+                blockZ = location.getBlockZ();
+            }
+        }
     }
 
     /**

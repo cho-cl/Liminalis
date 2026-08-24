@@ -1,38 +1,32 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0-7 complete. Phase 8 (abilities) is next, and is the one that runs
-> for the rest of the season - one hand-written ability per player, on request.
+> **Status:** Phases 0-8 complete. Only Phase 9 (the boss) remains from the original plan.
 >
-> **Revival is an expedition, not a rite.** Nothing done from the living world reaches into
-> Limbo. A living player crafts a Threshold Stone from eight Singularity residue around an
-> ender pearl, crosses over, finds the lost in featureless fog, takes their hand, and walks
-> back to the light they arrived at. The way in is the only way out.
+> **Abilities are commissioned, not rolled.** One per player, written by hand on request. The
+> framework asks for as little as possible from each new one: an id, a description, and a list
+> of `TierRequirement`s naming counters the ability increments itself. A generic unlock ladder
+> would have been cheaper and would have felt arbitrary bolted onto a healer.
 >
-> Run the clock out and the grey takes a life for letting you go. Run it out with no life to
-> give and it keeps you - which is the only way in the game to be lost without dying, and the
-> reason the rescue has weight. Disconnecting mid-crossing is free; the risk is meant to come
-> from the grey, not from the network.
+> **The Priest is the reference implementation** and is written longhand rather than assembled
+> from helpers, so the next ability can be written by reading it. Its three tiers are the shape
+> every later one should borrow: a thing you do to people, a thing you do to enemies, and
+> something at the top worth working toward.
 >
-> **The fifth book now carries real, followable instructions** - the recipe, that the way in
-> is the way out, that holding someone is enough, and exactly what running out of time costs.
-> It was deliberately left unfinished in Phase 6 and completed here, which was the promise.
+> **Tier is recomputed from counters rather than trusted.** A stored tier that drifted - from
+> an admin edit, or a rebalanced threshold - corrects itself. That is deliberate, and it means
+> `ability tier` is for testing rather than for permanent gifts.
 >
-> **Limbo is a bare, treeless pale garden.** Surface generation is done by hand and lays pale
-> moss four blocks deep - vanilla's pale garden gets its grey from decoration features rather
-> than surface rules, so removing the trees would otherwise have removed the grey too.
->
-> **Everything a player carries is one `Modifier`**, dispatched from a single listener and a
-> single tick loop, built on three primitives: `DynamicAttributeSource`, `Restriction` and
-> `Ticking`. Every number is read from config at the point of use, so `/liminalis reload`
-> genuinely rebalances a live server.
+> **Residue is the universal accelerant.** Sneak-right-click a shard to push progress toward
+> whatever your next tier wants. It exists so an ability gated behind something its owner
+> rarely does cannot leave them staring at a tier they can read about and never reach.
 >
 > Known gaps, all deliberate:
 > - End crystals and player-ignited creepers are not attributed as player damage.
 > - The third death drops your inventory in the overworld vanilla-style.
 > - Turning Limbo decorations back on would only affect newly generated chunks.
-> - Mortal wounds have no treatment yet beyond dying; the healing ability is Phase 8.
 > - The injury HUD and Singularity creature textures both wait on a resource pack that does
 >   not exist yet. Everything else about both systems is built.
+> - Phase 9, the boss, is deliberately undesigned until the world has matured.
 
 ## Context
 

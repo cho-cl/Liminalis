@@ -1,5 +1,6 @@
 package com.liminalis.core.config;
 
+import com.liminalis.core.ability.AbilitySettings;
 import com.liminalis.core.combat.CombatSettings;
 import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.LimboSettings;
@@ -26,6 +27,7 @@ public record LiminalisConfig(
         InjurySettings injuries,
         SingularitySettings singularity,
         RescueSettings rescue,
+        AbilitySettings abilities,
         boolean backupOnStart,
         int keepBackups,
         boolean debug) {
@@ -39,6 +41,7 @@ public record LiminalisConfig(
             InjurySettings.DEFAULTS,
             SingularitySettings.DEFAULTS,
             RescueSettings.DEFAULTS,
+            AbilitySettings.DEFAULTS,
             true,
             10,
             false);

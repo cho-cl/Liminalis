@@ -4,9 +4,12 @@ import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.JsonProfileStore;
 import com.liminalis.core.profile.ProfileBackup;
 import com.liminalis.core.profile.ProfileStore;
+import com.liminalis.plugin.ability.AbilityService;
+import com.liminalis.plugin.ability.PriestAbility;
 import com.liminalis.plugin.boon.Blessings;
 import com.liminalis.plugin.boon.Curses;
 import com.liminalis.plugin.combat.CombatListener;
+import com.liminalis.plugin.command.AbilityCommands;
 import com.liminalis.plugin.command.AuditLog;
 import com.liminalis.plugin.command.InjuryCommands;
 import com.liminalis.plugin.command.SingularityCommands;
@@ -74,6 +77,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private InjuryService injuries;
     private SingularityService singularity;
     private RescueService rescue;
+    private AbilityService abilities;
     private ModifierRegistry registry;
 
     @Override
@@ -119,6 +123,8 @@ public final class LiminalisPlugin extends JavaPlugin {
         singularity = new SingularityService(this, config, profiles, limboWorld, messages, debug);
         rescue = new RescueService(this, config, profiles, limbo, limboWorld, messages, debug);
         ThresholdStone.registerRecipe(this, messages);
+        abilities = new AbilityService(this, config, profiles, registry, modifiers,
+                rescue, messages, debug);
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
@@ -134,6 +140,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(injuries, this);
         getServer().getPluginManager().registerEvents(singularity, this);
         getServer().getPluginManager().registerEvents(rescue, this);
+        getServer().getPluginManager().registerEvents(abilities, this);
         modifiers.start();
         injuries.start();
         singularity.start();
@@ -181,6 +188,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         Blessings.all(tuning).forEach(registry::register);
         Curses.all(tuning).forEach(registry::register);
         Injuries.all(tuning).forEach(registry::register);
+        registry.register(new PriestAbility(tuning, profiles, registry, messages));
         registry.register(new MarkOfReturn(tuning, limbo));
     }
 
@@ -206,11 +214,13 @@ public final class LiminalisPlugin extends JavaPlugin {
                 injuries, messages, audit, command.knownPlayers());
         SingularityCommands singularityCommands = new SingularityCommands(this, singularity,
                 messages, audit, command.knownPlayers());
+        AbilityCommands abilityCommands = new AbilityCommands(profiles, registry, modifiers,
+                messages, audit, confirmations, command.knownPlayers());
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(
                     command.build(livesAndLimbo, traitCommands, boonCommands, injuryCommands,
-                            singularityCommands),
+                            singularityCommands, abilityCommands),
                     "Liminalis administration",
                     List.of("lim"));
             event.registrar().register(

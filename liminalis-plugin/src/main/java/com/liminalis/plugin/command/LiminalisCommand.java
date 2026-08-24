@@ -89,7 +89,8 @@ public final class LiminalisCommand {
                                                        TraitCommands traits,
                                                        BoonCommands boons,
                                                        InjuryCommands injuries,
-                                                       SingularityCommands singularity) {
+                                                       SingularityCommands singularity,
+                                                       AbilityCommands abilities) {
         return Commands.literal("liminalis")
                 .requires(source -> source.getSender().hasPermission("liminalis.admin"))
                 .executes(this::showOverview)
@@ -103,6 +104,7 @@ public final class LiminalisCommand {
                 .then(boons.tree())
                 .then(injuries.tree())
                 .then(singularity.tree())
+                .then(abilities.tree())
                 .build();
     }
 
@@ -353,7 +355,7 @@ public final class LiminalisCommand {
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
                 "Subcommands: reload, profile, debug, data, lives, limbo,"
-                        + " trait, boon, injury, singularity", LABEL));
+                        + " trait, boon, injury, singularity, ability", LABEL));
         return Command.SINGLE_SUCCESS;
     }
 

@@ -220,6 +220,69 @@ class ProfileCodecTest {
         assertThat(rewritten).contains("\"schemaVersion\": " + ProfileCodec.CURRENT_SCHEMA_VERSION);
     }
 
+    // ------------------------------------------------------ ability progress (schema 3)
+
+    @Test
+    void roundTripsAbilityProgressCounters() {
+        PlayerProfile p = PlayerProfile.createNew(ID, "Aero", 3);
+        p.setAbilityId("priest");
+        p.addAbilityProgress("priest.healed", 140);
+        p.addAbilityProgress("priest.undead_felled", 12);
+
+        PlayerProfile restored = codec.fromJson(codec.toJson(p));
+
+        assertThat(restored.abilityProgress())
+                .containsEntry("priest.healed", 140)
+                .containsEntry("priest.undead_felled", 12);
+    }
+
+    @Test
+    void progressAccumulatesRatherThanReplacing() {
+        PlayerProfile p = PlayerProfile.createNew(ID, "Aero", 3);
+        p.addAbilityProgress("priest.healed", 100);
+        p.addAbilityProgress("priest.healed", 40);
+
+        assertThat(p.abilityProgress()).containsEntry("priest.healed", 140);
+    }
+
+    @Test
+    void aProfileFromEitherEarlierSchemaStillLoads() {
+        // Both migrations walked in one go: schema 1 predates injuries AND ability progress.
+        String schemaOne = """
+            {
+              "schemaVersion": 1,
+              "id": "11111111-2222-3333-4444-555555555555",
+              "lastKnownName": "Aero",
+              "livesRemaining": 2,
+              "abilityId": "priest"
+            }
+            """;
+
+        PlayerProfile restored = codec.fromJson(schemaOne);
+
+        assertThat(restored.abilityId()).isEqualTo("priest");
+        assertThat(restored.injuries()).isEmpty();
+        assertThat(restored.abilityProgress()).isEmpty();
+    }
+
+    @Test
+    void aSchemaTwoProfileGainsEmptyProgressRatherThanFailing() {
+        String schemaTwo = """
+            {
+              "schemaVersion": 2,
+              "id": "11111111-2222-3333-4444-555555555555",
+              "lastKnownName": "Aero",
+              "livesRemaining": 3,
+              "injuries": [{"id": "bleeding", "expiresAt": 1700000600000}]
+            }
+            """;
+
+        PlayerProfile restored = codec.fromJson(schemaTwo);
+
+        assertThat(restored.injuries()).hasSize(1);
+        assertThat(restored.abilityProgress()).isEmpty();
+    }
+
     @Test
     void refusesMalformedJsonRatherThanReturningAnEmptyProfile() {
         assertThatThrownBy(() -> codec.fromJson("{ this is not json"))

@@ -1,5 +1,6 @@
 package com.liminalis.plugin.command;
 
+import com.liminalis.core.combat.CombatSettings;
 import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.core.profile.ProfileCodec;
@@ -332,6 +333,13 @@ public final class LiminalisCommand {
         sender.sendMessage(field("known profiles", Integer.toString(profiles.knownIds().size())));
         sender.sendMessage(field("resident", Integer.toString(profiles.residentProfiles().size())));
         sender.sendMessage(field("starting lives", Integer.toString(config.get().startingLives())));
+
+        CombatSettings combat = config.get().combat();
+        sender.sendMessage(field("pvp damage", "x" + combat.pvpDamageMultiplier()
+                + indirectSummary(combat)));
+        sender.sendMessage(field("food healing", "x" + combat.foodHealingMultiplier()));
+        sender.sendMessage(field("regeneration", "x" + combat.regenerationMultiplier()));
+
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
                 "Subcommands: reload, profile, debug, data", LABEL));
@@ -381,6 +389,21 @@ public final class LiminalisCommand {
     private Component unknownPlayer(String requested) {
         return Component.text("Liminalis has never seen '" + requested
                 + "'. Use a name it knows, or a raw UUID.", BAD);
+    }
+
+    /** Names the indirect sources that are NOT counted, since those are the surprising ones. */
+    private static String indirectSummary(CombatSettings combat) {
+        List<String> excluded = new java.util.ArrayList<>();
+        if (!combat.includeProjectiles()) {
+            excluded.add("projectiles");
+        }
+        if (!combat.includePets()) {
+            excluded.add("pets");
+        }
+        if (!combat.includeExplosives()) {
+            excluded.add("explosives");
+        }
+        return excluded.isEmpty() ? "" : " (excluding " + String.join(", ", excluded) + ")";
     }
 
     private Component field(String label, String value) {

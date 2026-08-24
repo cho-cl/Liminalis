@@ -21,5 +21,28 @@ storage:
   # Must be at least 1 - to turn backups off, use backup-on-start above.
   keep-backups: 10
 
+combat:
+  # Damage one player causes another is multiplied by this. 0.5 halves it.
+  # Set to 1.0 for vanilla PvP. Must be between 0.0 and 10.0.
+  pvp-damage-multiplier: 0.5
+
+  # Natural regeneration from a full hunger bar, and health gained from eating.
+  food-healing-multiplier: 0.5
+
+  # The Regeneration effect, from potions, beacons and abilities.
+  # Above 1.0 makes it worth more than it is in vanilla.
+  regeneration-multiplier: 1.25
+
+  # Whether indirect damage still counts as one player hurting another.
+  #
+  # These default to true for a reason: halving only melee damage does not reduce
+  # fighting, it just changes the weapon. Turn one off and anyone who wants to hurt
+  # someone reaches for a bow, a wolf, or a stack of TNT instead.
+  include-projectiles: true
+  include-pets: true
+  include-explosives: true
+
 # Verbose logging at startup. Can be toggled live with /liminalis debug on|off.
+# With this on, every damage and healing adjustment is logged, which is the quickest
+# way to confirm the numbers above are actually being applied.
 debug: false

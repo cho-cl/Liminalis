@@ -1,9 +1,13 @@
 package com.liminalis.core.profile;
 
+import com.liminalis.core.injury.ActiveInjury;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,6 +40,14 @@ public final class PlayerProfile {
 
     private String abilityId;
     private int abilityTier;
+
+    /**
+     * Wounds currently carried.
+     *
+     * <p>A list rather than a set of ids, because unlike every other modifier an injury has
+     * state of its own - when it fades. Cleared wholesale on respawn.
+     */
+    private final List<ActiveInjury> injuries = new ArrayList<>();
 
     private boolean firstJoinComplete;
     private long firstJoinedAt;
@@ -185,6 +197,36 @@ public final class PlayerProfile {
 
     public void setLastSeenAt(long lastSeenAt) {
         this.lastSeenAt = lastSeenAt;
+    }
+
+    public List<ActiveInjury> injuries() {
+        return Collections.unmodifiableList(injuries);
+    }
+
+    /** Adds a wound, replacing any existing one of the same kind rather than stacking it. */
+    public void addInjury(ActiveInjury injury) {
+        Objects.requireNonNull(injury, "injury");
+        removeInjury(injury.id());
+        injuries.add(injury);
+    }
+
+    public boolean removeInjury(String injuryId) {
+        return injuries.removeIf(existing -> existing.id().equals(injuryId));
+    }
+
+    public boolean hasInjury(String injuryId) {
+        return injuries.stream().anyMatch(existing -> existing.id().equals(injuryId));
+    }
+
+    /** Wipes every wound. This is what respawning does - a new body carries no old harm. */
+    public void clearInjuries() {
+        injuries.clear();
+    }
+
+    /** Used by {@link ProfileCodec} when rehydrating from disk. */
+    void replaceInjuries(Collection<ActiveInjury> restored) {
+        injuries.clear();
+        injuries.addAll(restored);
     }
 
     /** Used by {@link ProfileCodec} when rehydrating from disk. */

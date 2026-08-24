@@ -99,14 +99,22 @@ curse is a bargain: a bigger gift than any blessing, paid for with something you
 keep. Hollow gives three extra hearts and will not let heavy protection stay on you; Unshod
 makes you fast and barefoot forever.
 
-Every number across both phases lives in `config.yml` and is read at the moment it applies, so
+**Phase 5 - injuries and mortal wounds.** Large damage wounds you; massive damage maims you.
+Severity is judged on damage *after* armour as a fraction of your own maximum health, so heavy
+protection genuinely protects against losing an arm, and a player with extra hearts is not
+disproportionately hard to hurt. Wounds match their cause - a sword makes you bleed, a long
+fall sprains an ankle, an explosion concusses you. Ordinary injuries fade with time and fade
+faster under Regeneration. Mortal wounds never fade, and until a healing ability exists the
+only cure is to spend a life and get a new body.
+
+Every number across all phases lives in `config.yml` and is read at the moment it applies, so
 a rebalance takes effect on `/liminalis reload` with no restart.
 
 *Known gaps, all deliberate:* end crystals and player-ignited creepers are not attributed as
 player damage; the third death drops your inventory vanilla-style, so anyone revived later
-comes back with nothing; and re-enabling Limbo decorations would only affect newly generated
-chunks.
+comes back with nothing; re-enabling Limbo decorations would only affect newly generated
+chunks; and mortal wounds have no treatment yet beyond dying, since the ability that heals
+them arrives in Phase 8.
 
-Later phases - blessings and curses, injuries, the Singularity, revival, abilities, the boss -
-are described in the design doc and built one at a time, each verified on a real server before
+Later phases - the Singularity, revival, abilities, the boss - are described in the design doc and built one at a time, each verified on a real server before
 the next.

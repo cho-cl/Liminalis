@@ -146,7 +146,43 @@ curse:
     description: "Strength enough for anything but water. Do not go under."
 
 # ---------------------------------------------------------------------------------------
-# Later phases add their own sections: injuries, the Singularity, revival, abilities.
+# Injuries
+# ---------------------------------------------------------------------------------------
+
+injuries:
+  taken: "<prefix><red><injury></red><newline><dark_gray>  <description></dark_gray>"
+  mortal: "<prefix><dark_red><bold><injury></bold></dark_red><newline><dark_gray>  <description></dark_gray>"
+  healed: "<prefix><gray>Your <white><injury></white> has healed.</gray>"
+  cleared-by-death: "<gray><italic>A new body. Whatever was wrong with the old one is not your problem now.</italic></gray>"
+
+injury:
+  bleeding:
+    name: "Bleeding"
+    description: "You are losing blood. It will stop, but not soon."
+  sprained_ankle:
+    name: "Sprained Ankle"
+    description: "Every step is a decision. You are not outrunning anything."
+  burns:
+    name: "Burns"
+    description: "There is less of you that still works. Do not take another hit."
+  concussion:
+    name: "Concussion"
+    description: "Your hands will not do what you tell them, and neither will your aim."
+  punctured_lung:
+    name: "Punctured Lung"
+    description: "Breathing is work now. Stay out of the water."
+  lost_arm:
+    name: "Lost Arm"
+    description: "It is gone. You will not get it back in this body."
+  broken_legs:
+    name: "Broken Legs"
+    description: "They are not going to set themselves. You crawl now."
+  charred:
+    name: "Charred"
+    description: "Most of you burned. What is left is not enough to take much more."
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: the Singularity, revival, abilities.
 # ---------------------------------------------------------------------------------------
 
 profile:

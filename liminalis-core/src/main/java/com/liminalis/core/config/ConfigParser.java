@@ -1,6 +1,7 @@
 package com.liminalis.core.config;
 
 import com.liminalis.core.combat.CombatSettings;
+import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.GhostVisitSettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
@@ -41,6 +42,7 @@ public final class ConfigParser {
         CombatSettings combat = readCombat(reader);
         TraitSettings traits = readTraits(reader);
         BoonRollSettings boons = readBoons(reader);
+        InjurySettings injuries = readInjuries(reader);
 
         boolean backupOnStart = reader.flag("storage.backup-on-start",
                 LiminalisConfig.DEFAULTS.backupOnStart());
@@ -54,7 +56,8 @@ public final class ConfigParser {
             return ConfigResult.failed(reader.errors);
         }
         return ConfigResult.ok(new LiminalisConfig(
-                lives, limbo, combat, traits, boons, backupOnStart, keepBackups, debug));
+                lives, limbo, combat, traits, boons, injuries,
+                backupOnStart, keepBackups, debug));
     }
 
     private static LifeSettings readLives(Reader reader) {
@@ -109,6 +112,35 @@ public final class ConfigParser {
                     + " 1.0 together, but they add up to " + (blessing + curse));
         }
         return new BoonRollSettings(blessing, curse);
+    }
+
+    /**
+     * When a blow wounds, and how likely it is to.
+     *
+     * <p>The mortal threshold is checked against the injury one: a mortal threshold below
+     * the injury threshold would mean the worst wounds became reachable by lighter blows
+     * than ordinary ones, which is not a config anyone would write on purpose.
+     */
+    private static InjurySettings readInjuries(Reader reader) {
+        InjurySettings defaults = InjurySettings.DEFAULTS;
+        double injuryThreshold = reader.fraction("injuries.injury-threshold",
+                defaults.injuryThreshold());
+        double mortalThreshold = reader.fraction("injuries.mortal-threshold",
+                defaults.mortalThreshold());
+
+        if (mortalThreshold < injuryThreshold) {
+            reader.errors.add("injuries.mortal-threshold: must be at least"
+                    + " injuries.injury-threshold (" + injuryThreshold + ") but was "
+                    + mortalThreshold);
+        }
+
+        return new InjurySettings(
+                injuryThreshold,
+                reader.fraction("injuries.injury-chance", defaults.injuryChance()),
+                mortalThreshold,
+                reader.fraction("injuries.mortal-chance", defaults.mortalChance()),
+                reader.multiplier("injuries.regeneration-speedup",
+                        defaults.regenerationSpeedup()));
     }
 
     private static CombatSettings readCombat(Reader reader) {

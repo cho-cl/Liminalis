@@ -20,6 +20,7 @@ permissions:
       liminalis.admin.limbo: true
       liminalis.admin.trait: true
       liminalis.admin.boon: true
+      liminalis.admin.injury: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -43,4 +44,7 @@ permissions:
     default: op
   liminalis.admin.boon:
     description: List, inspect, set and clear player blessings and curses.
+    default: op
+  liminalis.admin.injury:
+    description: List, inspect, inflict and heal injuries and mortal wounds.
     default: op

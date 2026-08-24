@@ -381,6 +381,49 @@ class ConfigParserTest {
         assertThat(ConfigParser.parse(values).valid()).isTrue();
     }
 
+    // ---------------------------------------------------------------- injuries section
+
+    @Test
+    void readsTheInjurySection() {
+        Map<String, Object> values = valid();
+        values.put("injuries.injury-threshold", 0.3);
+        values.put("injuries.injury-chance", 0.5);
+        values.put("injuries.mortal-threshold", 0.7);
+        values.put("injuries.mortal-chance", 0.2);
+        values.put("injuries.regeneration-speedup", 2.0);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().injuries().injuryThreshold()).isEqualTo(0.3);
+        assertThat(result.config().injuries().mortalChance()).isEqualTo(0.2);
+        assertThat(result.config().injuries().regenerationSpeedup()).isEqualTo(2.0);
+    }
+
+    @Test
+    void rejectsAMortalThresholdBelowTheInjuryThreshold() {
+        // Otherwise the worst wounds would be reachable by lighter blows than ordinary ones,
+        // and every large hit would maim rather than injure.
+        Map<String, Object> values = valid();
+        values.put("injuries.injury-threshold", 0.6);
+        values.put("injuries.mortal-threshold", 0.2);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("injuries.mortal-threshold"));
+    }
+
+    @Test
+    void acceptsThresholdsThatAreEqual() {
+        Map<String, Object> values = valid();
+        values.put("injuries.injury-threshold", 0.5);
+        values.put("injuries.mortal-threshold", 0.5);
+
+        assertThat(ConfigParser.parse(values).valid()).isTrue();
+    }
+
     @Test
     void pvpDeathsCanBeSwitchedOff() {
         Map<String, Object> values = valid();

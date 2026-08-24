@@ -1,5 +1,6 @@
 package com.liminalis.core.profile;
 
+import com.liminalis.core.injury.ActiveInjury;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -26,7 +27,7 @@ import java.util.UUID;
  */
 public final class ProfileCodec {
 
-    public static final int CURRENT_SCHEMA_VERSION = 1;
+    public static final int CURRENT_SCHEMA_VERSION = 2;
 
     private static final String SCHEMA_VERSION = "schemaVersion";
     private static final String ID = "id";
@@ -45,6 +46,9 @@ public final class ProfileCodec {
     private static final String FIRST_JOIN_COMPLETE = "firstJoinComplete";
     private static final String FIRST_JOINED_AT = "firstJoinedAt";
     private static final String LAST_SEEN_AT = "lastSeenAt";
+    private static final String INJURIES = "injuries";
+    private static final String INJURY_ID = "id";
+    private static final String INJURY_EXPIRES_AT = "expiresAt";
 
     private static final String UNKNOWN_NAME = "unknown";
 
@@ -78,6 +82,15 @@ public final class ProfileCodec {
         root.addProperty(FIRST_JOINED_AT, profile.firstJoinedAt());
         root.addProperty(LAST_SEEN_AT, profile.lastSeenAt());
 
+        JsonArray injuries = new JsonArray();
+        for (ActiveInjury injury : profile.injuries()) {
+            JsonObject entry = new JsonObject();
+            entry.addProperty(INJURY_ID, injury.id());
+            entry.addProperty(INJURY_EXPIRES_AT, injury.expiresAt());
+            injuries.add(entry);
+        }
+        root.add(INJURIES, injuries);
+
         return gson.toJson(root);
     }
 
@@ -108,23 +121,58 @@ public final class ProfileCodec {
         profile.setFirstJoinComplete(optionalBoolean(root, FIRST_JOIN_COMPLETE));
         profile.setFirstJoinedAt(optionalLong(root, FIRST_JOINED_AT));
         profile.setLastSeenAt(optionalLong(root, LAST_SEEN_AT));
+        profile.replaceInjuries(readInjuries(root));
 
         return profile;
     }
 
     /**
-     * Upgrades an older document in place. Nothing to do yet - there is only one schema
-     * version - but the call site exists so that adding version 2 is an edit here rather
-     * than a redesign.
+     * Upgrades an older document in place.
+     *
+     * <p>Cases fall through deliberately, so a version 1 profile is walked forward through
+     * every step rather than needing a direct path to the present.
      */
     private void migrate(JsonObject root, int fromVersion) {
         if (fromVersion == CURRENT_SCHEMA_VERSION) {
             return;
         }
-        // switch (fromVersion) { case 1: upgrade1to2(root); /* fall through */ }
-        throw new ProfileFormatException(
-                "no migration path from schema version " + fromVersion
-                        + " to " + CURRENT_SCHEMA_VERSION);
+        switch (fromVersion) {
+            case 1:
+                // Version 2 added injuries. Nothing to convert - an absent array reads as
+                // "no wounds", which is exactly right for a profile written before wounds
+                // existed. The case is here so the walk-forward is explicit rather than
+                // relying on the reader being lenient by accident.
+                // fall through
+            case 2:
+                break;
+            default:
+                throw new ProfileFormatException(
+                        "no migration path from schema version " + fromVersion
+                                + " to " + CURRENT_SCHEMA_VERSION);
+        }
+    }
+
+    private List<ActiveInjury> readInjuries(JsonObject root) {
+        List<ActiveInjury> injuries = new ArrayList<>();
+        if (!present(root, INJURIES)) {
+            return injuries;
+        }
+        JsonElement element = root.get(INJURIES);
+        if (!element.isJsonArray()) {
+            throw new ProfileFormatException("field '" + INJURIES + "' is not an array");
+        }
+        for (JsonElement entry : element.getAsJsonArray()) {
+            if (entry == null || !entry.isJsonObject()) {
+                continue;
+            }
+            JsonObject injury = entry.getAsJsonObject();
+            String id = nullableString(injury, INJURY_ID);
+            if (id == null || id.isBlank()) {
+                throw new ProfileFormatException("an injury entry is missing its id");
+            }
+            injuries.add(new ActiveInjury(id, optionalLong(injury, INJURY_EXPIRES_AT)));
+        }
+        return injuries;
     }
 
     private JsonObject parseObject(String json) {

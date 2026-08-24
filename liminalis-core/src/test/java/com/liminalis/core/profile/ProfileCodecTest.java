@@ -1,5 +1,6 @@
 package com.liminalis.core.profile;
 
+import com.liminalis.core.injury.ActiveInjury;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -162,6 +163,61 @@ class ProfileCodecTest {
         assertThatThrownBy(() -> codec.fromJson(json))
                 .isInstanceOf(ProfileCodec.ProfileFormatException.class)
                 .hasMessageContaining("9999");
+    }
+
+    // ---------------------------------------------------------------- injuries (schema 2)
+
+    @Test
+    void roundTripsActiveInjuriesWithTheirExpiry() {
+        PlayerProfile p = PlayerProfile.createNew(ID, "Aero", 3);
+        p.addInjury(new ActiveInjury("bleeding", 1_700_000_600_000L));
+        p.addInjury(new ActiveInjury("lost_arm", 0L));
+
+        PlayerProfile restored = codec.fromJson(codec.toJson(p));
+
+        assertThat(restored.injuries()).containsExactly(
+                new ActiveInjury("bleeding", 1_700_000_600_000L),
+                new ActiveInjury("lost_arm", 0L));
+    }
+
+    @Test
+    void aProfileWrittenBeforeInjuriesExistedStillLoads() {
+        // The migration hook's first real use. A schema 1 profile predates the injuries
+        // field entirely, and every player on the server has one - if this throws, nobody
+        // can log in after the update.
+        String schemaOne = """
+            {
+              "schemaVersion": 1,
+              "id": "11111111-2222-3333-4444-555555555555",
+              "lastKnownName": "Aero",
+              "livesRemaining": 2,
+              "traitIds": ["resilience"],
+              "curseId": "hollow"
+            }
+            """;
+
+        PlayerProfile restored = codec.fromJson(schemaOne);
+
+        assertThat(restored.livesRemaining()).isEqualTo(2);
+        assertThat(restored.traitIds()).containsExactly("resilience");
+        assertThat(restored.curseId()).isEqualTo("hollow");
+        assertThat(restored.injuries()).isEmpty();
+    }
+
+    @Test
+    void anUpgradedProfileIsWrittenBackAtTheCurrentSchema() {
+        String schemaOne = """
+            {
+              "schemaVersion": 1,
+              "id": "11111111-2222-3333-4444-555555555555",
+              "lastKnownName": "Aero",
+              "livesRemaining": 3
+            }
+            """;
+
+        String rewritten = codec.toJson(codec.fromJson(schemaOne));
+
+        assertThat(rewritten).contains("\"schemaVersion\": " + ProfileCodec.CURRENT_SCHEMA_VERSION);
     }
 
     @Test

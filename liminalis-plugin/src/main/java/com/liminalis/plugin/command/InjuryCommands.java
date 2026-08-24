@@ -84,12 +84,19 @@ public final class InjuryCommands {
                         .then(playerArgument().executes(this::carried)))
                 .then(Commands.literal("give")
                         .then(playerArgument().then(injuryArgument().executes(this::give))))
-                .then(Commands.literal("heal")
-                        .then(playerArgument()
-                                .executes(context -> heal(context, null))
-                                .then(injuryArgument().executes(context ->
-                                        heal(context, StringArgumentType.getString(
-                                                context, "injury"))))));
+                .then(Commands.literal("heal").then(healArguments()))
+                // "remove" as well as "heal", because heal is the word for what it does to a
+                // player and remove is the word you reach for when you are testing. Costing
+                // one line to not have to remember which one this plugin chose is worth it.
+                .then(Commands.literal("remove").then(healArguments()));
+    }
+
+    /** Shared by heal and remove: a player, and optionally one wound rather than all. */
+    private RequiredArgumentBuilder<CommandSourceStack, String> healArguments() {
+        return playerArgument()
+                .executes(context -> heal(context, null))
+                .then(injuryArgument().executes(context ->
+                        heal(context, StringArgumentType.getString(context, "injury"))));
     }
 
     private int list(CommandContext<CommandSourceStack> context) {

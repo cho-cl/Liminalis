@@ -1,0 +1,23 @@
+# Every line Liminalis says to a player.
+#
+# Formatted with MiniMessage: https://docs.advntr.dev/minimessage/format.html
+# <prefix> is available in any message and inserts the prefix defined below.
+#
+# This file is the voice of the server. Operator and diagnostic output from the
+# /liminalis admin commands is deliberately NOT here - it lives in code, because it is
+# tooling rather than something a player ever reads.
+#
+# Reload with /liminalis reload messages.
+
+prefix: "<dark_gray>[<gradient:#6f8faf:#c9d6e3>Liminalis</gradient><dark_gray>]</dark_gray> "
+
+# ---------------------------------------------------------------------------------------
+# Phase 0 has almost nothing to say yet. Lives, Limbo, traits, blessings, curses and
+# injuries each add their own section as they land.
+# ---------------------------------------------------------------------------------------
+
+profile:
+  header: "<prefix><gray>You are</gray> <white><name></white>"
+  lives: "<gray>  Lives remaining: </gray><white><lives></white>"
+  traits: "<gray>  Traits: </gray><white><traits></white>"
+  none: "<dark_gray>none</dark_gray>"

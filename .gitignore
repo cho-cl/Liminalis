@@ -1,0 +1,18 @@
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Local test server - never commit world data or player profiles
+run/
+server/
+*.log
+
+dependency-reduced-pom.xml

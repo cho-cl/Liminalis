@@ -1,0 +1,30 @@
+name: Liminalis
+version: '${project.version}'
+main: com.liminalis.plugin.LiminalisPlugin
+api-version: '1.21'
+description: Three lives, one ability, and the fog between.
+authors:
+  - AERO
+website: https://github.com/
+
+permissions:
+  liminalis.admin:
+    description: Access to the /liminalis administration tree.
+    default: op
+    children:
+      liminalis.admin.reload: true
+      liminalis.admin.profile: true
+      liminalis.admin.debug: true
+      liminalis.admin.data: true
+  liminalis.admin.reload:
+    description: Reload config.yml and messages.yml.
+    default: op
+  liminalis.admin.profile:
+    description: View any player's Liminalis profile.
+    default: op
+  liminalis.admin.debug:
+    description: Toggle verbose logging.
+    default: op
+  liminalis.admin.data:
+    description: Save, inspect, back up and re-read profile files.
+    default: op

@@ -1,0 +1,25 @@
+# Liminalis configuration.
+#
+# Every tunable number in the plugin lives in this file. Edit and run
+# /liminalis reload - no restart needed.
+#
+# If anything here is invalid, the new values are REFUSED and the previous ones stay in
+# force, with the problems printed to the console. On startup, an invalid config stops the
+# plugin from enabling at all, rather than silently running on numbers nobody chose.
+
+lives:
+  # How many lives a player starts with. The last one being spent sends them to Limbo.
+  # Must be between 1 and 100.
+  starting: 3
+
+storage:
+  # Copy the players/ directory into backups/ every time the server starts.
+  # Cheap insurance against a bad migration or a mistaken admin command.
+  backup-on-start: true
+
+  # How many backups to keep. The oldest are deleted beyond this.
+  # Must be at least 1 - to turn backups off, use backup-on-start above.
+  keep-backups: 10
+
+# Verbose logging at startup. Can be toggled live with /liminalis debug on|off.
+debug: false

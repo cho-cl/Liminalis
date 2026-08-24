@@ -21,6 +21,7 @@ permissions:
       liminalis.admin.trait: true
       liminalis.admin.boon: true
       liminalis.admin.injury: true
+      liminalis.admin.singularity: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -47,4 +48,7 @@ permissions:
     default: op
   liminalis.admin.injury:
     description: List, inspect, inflict and heal injuries and mortal wounds.
+    default: op
+  liminalis.admin.singularity:
+    description: Force waves, spawn creatures, and hand out books and residue.
     default: op

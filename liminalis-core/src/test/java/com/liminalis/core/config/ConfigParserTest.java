@@ -424,6 +424,53 @@ class ConfigParserTest {
         assertThat(ConfigParser.parse(values).valid()).isTrue();
     }
 
+    // ------------------------------------------------------------- singularity section
+
+    @Test
+    void readsTheSingularitySection() {
+        Map<String, Object> values = valid();
+        values.put("singularity.chance-per-player", 0.8);
+        values.put("singularity.interval-seconds", 600);
+        values.put("singularity.book-drop-chance", 0.5);
+        values.put("singularity.min-distance", 30);
+        values.put("singularity.max-distance", 60);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().singularity().chancePerPlayer()).isEqualTo(0.8);
+        assertThat(result.config().singularity().intervalSeconds()).isEqualTo(600L);
+        assertThat(result.config().singularity().maxDistance()).isEqualTo(60);
+    }
+
+    @Test
+    void rejectsReversedSpawnDistances() {
+        // Reversed, every attempt to find a spot fails silently and the Singularity simply
+        // never appears - which reads as a broken feature rather than a bad number.
+        Map<String, Object> values = valid();
+        values.put("singularity.min-distance", 80);
+        values.put("singularity.max-distance", 20);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("singularity.max-distance"));
+    }
+
+    @Test
+    void rejectsReversedResidueBounds() {
+        Map<String, Object> values = valid();
+        values.put("singularity.min-residue", 5);
+        values.put("singularity.max-residue", 1);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("singularity.max-residue"));
+    }
+
     @Test
     void pvpDeathsCanBeSwitchedOff() {
         Map<String, Object> values = valid();

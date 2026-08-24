@@ -116,6 +116,25 @@ traits:
     broken_legs.jump-penalty: 0.50
     charred.health-penalty: 8.0
 
+singularity:
+  # Rolled for EVERY online player, every interval - not once for the server. A single
+  # roll would mean a full server and an empty one saw the same number of creatures,
+  # and the people actually playing would almost never meet any.
+  chance-per-player: 0.5
+  interval-seconds: 1800
+
+  # Chance a dead creature leaves one of the five books.
+  book-drop-chance: 0.75
+
+  # How close creatures appear to the player they were sent to. max must be >= min, or
+  # every placement attempt fails silently and the Singularity never appears at all.
+  min-distance: 24
+  max-distance: 48
+
+  # Residue left per kill - the universal accelerant for ability unlocks.
+  min-residue: 1
+  max-residue: 3
+
 injuries:
   # Severity is judged on damage AFTER armour, as a fraction of the victim's own maximum
   # health. Post-armour is what makes heavy protection genuinely protective against being

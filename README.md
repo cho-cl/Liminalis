@@ -107,14 +107,25 @@ fall sprains an ankle, an explosion concusses you. Ordinary injuries fade with t
 faster under Regeneration. Mortal wounds never fade, and until a healing ability exists the
 only cure is to spend a life and get a new body.
 
+**Phase 6 - the Singularity.** Every thirty minutes, each online player is rolled separately
+for a creature - so the world gets busier as more people are in it, rather than thinner. Three
+shapes, and no single answer that beats all of them: one that will not stop coming, one that
+ignores walls, and one that will not let you close the distance. Killing one yields residue
+(the universal accelerant for ability unlocks) and, three times in four, one of five books.
+
+The books are the only source of knowledge about any of this, and they are physical written
+books rather than an unlockable codex - so they can be traded, hoarded, copied at a lectern
+and argued over. The knowledge spreading socially is the point.
+
 Every number across all phases lives in `config.yml` and is read at the moment it applies, so
 a rebalance takes effect on `/liminalis reload` with no restart.
 
-*Known gaps, all deliberate:* end crystals and player-ignited creepers are not attributed as
-player damage; the third death drops your inventory vanilla-style, so anyone revived later
-comes back with nothing; re-enabling Limbo decorations would only affect newly generated
-chunks; and mortal wounds have no treatment yet beyond dying, since the ability that heals
-them arrives in Phase 8.
+*Known gaps, all deliberate:* the fifth book stops short of revival instructions because the
+expedition it describes is Phase 7 and does not exist yet; end crystals and player-ignited
+creepers are not attributed as player damage; the third death drops your inventory
+vanilla-style; re-enabling Limbo decorations would only affect newly generated chunks; mortal
+wounds have no treatment yet beyond dying; and the injury HUD and Singularity textures both
+wait on a resource pack that has not been made.
 
-Later phases - the Singularity, revival, abilities, the boss - are described in the design doc and built one at a time, each verified on a real server before
+Later phases - revival, abilities, the boss - are described in the design doc and built one at a time, each verified on a real server before
 the next.

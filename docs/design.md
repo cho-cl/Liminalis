@@ -1,7 +1,7 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0-5 complete, verified on a real 1.21.11 server. Phase 6 (the
-> Singularity) is next.
+> **Status:** Phases 0-6 complete, verified on a real 1.21.11 server. Phase 7 (revival) is
+> next, and is the one the whole rescue loop hangs off.
 >
 > **Limbo is a bare, treeless pale garden.** Caves, structures, mobs and decorations are all
 > generated off. Surface generation is taken over by hand and lays pale moss four blocks
@@ -17,14 +17,18 @@
 > so `/liminalis reload` genuinely rebalances a live server.
 >
 > Known gaps, all deliberate:
+> - The **fifth book, On Getting Them Back, deliberately stops short of instructions**,
+>   because the expedition it describes is Phase 7 and does not exist yet. Writing steps for
+>   a mechanic that has not been built would be lying to players in the one place the design
+>   cannot afford it. Its final pages land with the mechanic.
 > - End crystals and player-ignited creepers are not attributed as player damage.
-> - The third death drops your inventory in the overworld vanilla-style, so anyone revived
->   later returns empty-handed.
+> - The third death drops your inventory in the overworld vanilla-style.
 > - Turning Limbo decorations back on would only affect newly generated chunks.
-> - Mortal wounds have no treatment yet beyond dying. The ability that heals them arrives in
->   Phase 8; until then, spending a life is the only cure.
-> - The injury HUD (pack-driven icons) is not built. Wounds are announced in chat and listed
->   in `/profile`.
+> - Mortal wounds have no treatment yet beyond dying; the healing ability is Phase 8.
+> - The injury HUD (pack-driven icons) is not built - wounds announce in chat and show in
+>   `/profile`. It needs a resource pack, which does not exist yet.
+> - Singularity creatures use vanilla textures until that pack exists. Everything else about
+>   them - attributes, names, auras, drops - is already theirs.
 
 ## Context
 

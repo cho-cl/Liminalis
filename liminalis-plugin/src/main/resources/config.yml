@@ -116,6 +116,22 @@ traits:
     broken_legs.jump-penalty: 0.50
     charred.health-penalty: 8.0
 
+    # The Priest. Tier 1 heals, tier 2 adds holy weight against the undead, tier 3
+    # closes mortal wounds - the only thing in the game that can, short of dying.
+    priest.heal-amount: 6.0
+    priest.heal-cooldown-seconds: 8
+    priest.tier2-healing-required: 200
+    priest.holy-damage: 4.0
+    priest.tier3-undead-required: 100
+
+abilities:
+  # How much progress one shard of Singularity residue buys toward the next tier.
+  #
+  # This is the rate that decides whether the accelerant is a genuine alternative route
+  # or merely a nudge. It exists so an ability gated behind something its owner rarely
+  # does cannot leave them staring at a tier they can read about and never reach.
+  progress-per-residue: 25
+
 rescue:
   # How long a living player may stay in the grey before it starts keeping things.
   #

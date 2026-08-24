@@ -5,7 +5,9 @@ import com.liminalis.core.injury.ActiveInjury;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +42,14 @@ public final class PlayerProfile {
 
     private String abilityId;
     private int abilityTier;
+
+    /**
+     * Counters an ability increments as its owner does the things it cares about.
+     *
+     * <p>Open-ended and namespaced by ability, so a new ability defines its own counters
+     * without anything here needing to know they exist.
+     */
+    private final Map<String, Integer> abilityProgress = new LinkedHashMap<>();
 
     /**
      * Wounds currently carried.
@@ -197,6 +207,35 @@ public final class PlayerProfile {
 
     public void setLastSeenAt(long lastSeenAt) {
         this.lastSeenAt = lastSeenAt;
+    }
+
+    public Map<String, Integer> abilityProgress() {
+        return Collections.unmodifiableMap(abilityProgress);
+    }
+
+    /** Adds to a counter, creating it if this is the first time. */
+    public void addAbilityProgress(String counterKey, int amount) {
+        Objects.requireNonNull(counterKey, "counterKey");
+        if (amount == 0) {
+            return;
+        }
+        abilityProgress.merge(counterKey, amount, Integer::sum);
+    }
+
+    public void setAbilityProgress(String counterKey, int value) {
+        Objects.requireNonNull(counterKey, "counterKey");
+        abilityProgress.put(counterKey, value);
+    }
+
+    /** Wipes every counter. Used when an ability is reassigned. */
+    public void clearAbilityProgress() {
+        abilityProgress.clear();
+    }
+
+    /** Used by {@link ProfileCodec} when rehydrating from disk. */
+    void replaceAbilityProgress(Map<String, Integer> restored) {
+        abilityProgress.clear();
+        abilityProgress.putAll(restored);
     }
 
     public List<ActiveInjury> injuries() {

@@ -1,6 +1,8 @@
 package com.liminalis.plugin.command;
 
+import com.liminalis.core.ability.AbilityProgression;
 import com.liminalis.core.profile.PlayerProfile;
+import com.liminalis.plugin.ability.Ability;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.modifier.Modifier;
 import com.liminalis.plugin.modifier.ModifierRegistry;
@@ -72,9 +74,39 @@ public final class ProfileCommand {
         describeOne(player, "Blessing", profile.blessingId());
         describeOne(player, "Curse", profile.curseId());
         describe(player, "Marks", profile.markIds());
-        describeOne(player, "Ability", profile.abilityId());
+        describeAbility(player, profile);
 
         return Command.SINGLE_SUCCESS;
+    }
+
+    /**
+     * The ability, its tier, and what the next tier is waiting on.
+     *
+     * <p>Shown as the concrete thing to go and do rather than as a tier number, because
+     * "148 / 200 priest.healed" tells a player how to spend their evening and "tier 1 of 3"
+     * does not.
+     */
+    private void describeAbility(Player player, PlayerProfile profile) {
+        String id = profile.abilityId();
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        player.sendMessage(Component.text("  Ability:", LABEL));
+        line(player, id);
+
+        Modifier modifier = registry.find(id).orElse(null);
+        if (!(modifier instanceof Ability ability)) {
+            return;
+        }
+        player.sendMessage(Component.text("      tier ", FAINT)
+                .append(Component.text(profile.abilityTier() + " / " + ability.maxTier(), VALUE)));
+
+        AbilityProgression.nextRequirement(ability.tiers(), profile.abilityProgress())
+                .ifPresent(next -> player.sendMessage(Component.text("      next: ", FAINT)
+                        .append(Component.text(
+                                profile.abilityProgress().getOrDefault(next.counterKey(), 0)
+                                        + " / " + next.required() + " "
+                                        + next.counterKey(), VALUE))));
     }
 
     private void describe(Player player, String label, Set<String> ids) {

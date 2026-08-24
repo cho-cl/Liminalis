@@ -229,7 +229,36 @@ rescue:
   brought-back-broadcast: "<dark_gray><italic><white><player></white> has been brought back by <white><rescuer></white>.</italic></dark_gray>"
 
 # ---------------------------------------------------------------------------------------
-# Later phases add their own sections: abilities.
+# Abilities
+#
+# Each one needs ability.<id>.name and .description, plus a .tier<n> line per tier saying
+# what that tier granted. Written for the player who asked for it - they will read this
+# line the moment they earn it, and it is the payoff for however long they worked.
+# ---------------------------------------------------------------------------------------
+
+ability:
+  granted: "<prefix><gradient:#c9d6e3:#8f7fbf><ability></gradient><newline><dark_gray>  <description></dark_gray>"
+  tier-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  Tier <tier>: <granted></white>"
+  fed: "<gray>The residue goes into it and does not come back. <white>+<amount></white></gray>"
+  none-to-feed: "<gray>You have no ability for it to go into.</gray>"
+  already-complete: "<gray>There is nothing left of it to open.</gray>"
+
+  priest:
+    name: "Priest"
+    description: "You can put your hands on someone and make them better. Right-click, empty-handed."
+    tier1: "Lay hands on someone to heal them."
+    tier2: "Your blows carry holy weight against the undead."
+    tier3: "Sneak and right-click to close a mortal wound. Nothing else in the world can."
+    healed: "<gray>You lay hands on <white><player></white>.</gray>"
+    healed-by: "<gray><white><player></white> lays hands on you. It helps.</gray>"
+    already-whole: "<gray><player> is not hurt.</gray>"
+    not-yet: "<gray>Not yet. <white><seconds>s</white>.</gray>"
+    nothing-to-treat: "<gray><player> has no mortal wound. Only those.</gray>"
+    treated: "<prefix><white>You close the wound. It should not have been possible.</white>"
+    treated-by: "<prefix><white><player> closes your wound.</white><gray> Whatever was taken is back.</gray>"
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: the boss.
 # ---------------------------------------------------------------------------------------
 
 profile:

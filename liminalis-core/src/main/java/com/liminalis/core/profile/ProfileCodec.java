@@ -10,7 +10,9 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -27,7 +29,7 @@ import java.util.UUID;
  */
 public final class ProfileCodec {
 
-    public static final int CURRENT_SCHEMA_VERSION = 2;
+    public static final int CURRENT_SCHEMA_VERSION = 3;
 
     private static final String SCHEMA_VERSION = "schemaVersion";
     private static final String ID = "id";
@@ -49,6 +51,7 @@ public final class ProfileCodec {
     private static final String INJURIES = "injuries";
     private static final String INJURY_ID = "id";
     private static final String INJURY_EXPIRES_AT = "expiresAt";
+    private static final String ABILITY_PROGRESS = "abilityProgress";
 
     private static final String UNKNOWN_NAME = "unknown";
 
@@ -91,6 +94,10 @@ public final class ProfileCodec {
         }
         root.add(INJURIES, injuries);
 
+        JsonObject progress = new JsonObject();
+        profile.abilityProgress().forEach(progress::addProperty);
+        root.add(ABILITY_PROGRESS, progress);
+
         return gson.toJson(root);
     }
 
@@ -122,6 +129,7 @@ public final class ProfileCodec {
         profile.setFirstJoinedAt(optionalLong(root, FIRST_JOINED_AT));
         profile.setLastSeenAt(optionalLong(root, LAST_SEEN_AT));
         profile.replaceInjuries(readInjuries(root));
+        profile.replaceAbilityProgress(readProgress(root));
 
         return profile;
     }
@@ -144,12 +152,41 @@ public final class ProfileCodec {
                 // relying on the reader being lenient by accident.
                 // fall through
             case 2:
+                // Version 3 added ability progress counters. Like injuries before it, an
+                // absent object reads as "no progress", which is right for a profile written
+                // before the counters existed.
+                // fall through
+            case 3:
                 break;
             default:
                 throw new ProfileFormatException(
                         "no migration path from schema version " + fromVersion
                                 + " to " + CURRENT_SCHEMA_VERSION);
         }
+    }
+
+    private Map<String, Integer> readProgress(JsonObject root) {
+        Map<String, Integer> progress = new LinkedHashMap<>();
+        if (!present(root, ABILITY_PROGRESS)) {
+            return progress;
+        }
+        JsonElement element = root.get(ABILITY_PROGRESS);
+        if (!element.isJsonObject()) {
+            throw new ProfileFormatException("field '" + ABILITY_PROGRESS + "' is not an object");
+        }
+        for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
+            JsonElement value = entry.getValue();
+            if (value == null || value.isJsonNull()) {
+                continue;
+            }
+            try {
+                progress.put(entry.getKey(), value.getAsInt());
+            } catch (ClassCastException | NumberFormatException | IllegalStateException e) {
+                throw new ProfileFormatException("ability progress '" + entry.getKey()
+                        + "' is not a number", e);
+            }
+        }
+        return progress;
     }
 
     private List<ActiveInjury> readInjuries(JsonObject root) {

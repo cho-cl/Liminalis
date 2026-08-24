@@ -127,6 +127,15 @@ Run the clock out and the grey takes a life for letting you go. Run it out with 
 to give and it keeps you - the only way in the game to be lost without dying. Disconnecting
 mid-crossing is free: the risk should come from the grey, not the network.
 
+**Phase 8 - abilities.** One per player, hand-written on request. Each defines its own unlock
+conditions by counting the things it is actually about, so tiers open through play rather than
+through a generic ladder. Singularity residue accelerates any of them, which is what stops an
+ability gated behind something its owner rarely does from becoming a dead end.
+
+The Priest ships as the reference: lay hands on someone to heal them, then holy weight against
+the undead, then - at the top - the ability to close a mortal wound, which nothing else in the
+world can do. It is written longhand so the next ability can be written by reading it.
+
 Every number across all phases lives in `config.yml` and is read at the moment it applies, so
 a rebalance takes effect on `/liminalis reload` with no restart.
 
@@ -136,5 +145,5 @@ vanilla-style; re-enabling Limbo decorations would only affect newly generated c
 wounds have no treatment yet beyond dying; and the injury HUD and Singularity textures both
 wait on a resource pack that has not been made.
 
-Later phases - abilities and the boss - are described in the design doc and built one at a time, each verified on a real server before
+The boss - Phase 9, deliberately undesigned until the world has matured - is described in the design doc and built one at a time, each verified on a real server before
 the next.

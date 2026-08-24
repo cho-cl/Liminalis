@@ -22,6 +22,7 @@ permissions:
       liminalis.admin.boon: true
       liminalis.admin.injury: true
       liminalis.admin.singularity: true
+      liminalis.admin.ability: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -51,4 +52,7 @@ permissions:
     default: op
   liminalis.admin.singularity:
     description: Force waves, spawn creatures, and hand out books and residue.
+    default: op
+  liminalis.admin.ability:
+    description: Grant, take, inspect and tier player abilities. Works on offline players.
     default: op

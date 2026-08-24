@@ -102,7 +102,8 @@ public final class LiminalisCommand {
                 .then(extra.livesTree())
                 .then(extra.limboTree())
                 .then(traits.tree())
-                .then(boons.tree())
+                .then(boons.blessingTree())
+                .then(boons.curseTree())
                 .then(injuries.tree())
                 .then(singularity.tree())
                 .then(abilities.tree())
@@ -375,8 +376,8 @@ public final class LiminalisCommand {
 
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
-                "Subcommands: reload, profile, debug, data, lives, limbo,"
-                        + " trait, boon, injury, singularity, ability, items", LABEL));
+                "Subcommands: reload, profile, debug, data, lives, limbo, trait,"
+                        + " blessing, curse, injury, singularity, ability, items", LABEL));
         return Command.SINGLE_SUCCESS;
     }
 

@@ -70,34 +70,58 @@ public final class BoonCommands {
         this.playerNames = Objects.requireNonNull(playerNames);
     }
 
-    public LiteralArgumentBuilder<CommandSourceStack> tree() {
-        return Commands.literal("boon")
-                .requires(permission("liminalis.admin.boon"))
-                .then(Commands.literal("list").executes(this::list))
-                .then(Commands.literal("info")
-                        .then(boonArgument().executes(this::info)))
-                .then(Commands.literal("set")
-                        .then(playerArgument().then(boonArgument().executes(this::set))))
-                .then(Commands.literal("clear")
-                        .then(playerArgument().executes(this::clear)));
+    /**
+     * Blessings and curses get a subtree each rather than sharing one.
+     *
+     * <p>They were a single {@code boon} command originally, which meant tab-completing a
+     * grant offered all ten ids mixed together and left it to the operator to remember which
+     * half was which. Splitting them means the list you are shown is already the list you
+     * meant, and it is much harder to hand somebody a curse while believing you gave a gift.
+     *
+     * <p>Mutual exclusivity still holds across both: granting either clears the other,
+     * because a player carrying a blessing and a curse at once is a state the roll can never
+     * produce, and so must not be a state a command can produce either.
+     */
+    public LiteralArgumentBuilder<CommandSourceStack> blessingTree() {
+        return subtree("blessing", ModifierType.BLESSING);
     }
 
-    private int list(CommandContext<CommandSourceStack> context) {
+    public LiteralArgumentBuilder<CommandSourceStack> curseTree() {
+        return subtree("curse", ModifierType.CURSE);
+    }
+
+    private LiteralArgumentBuilder<CommandSourceStack> subtree(String label, ModifierType type) {
+        return Commands.literal(label)
+                .requires(permission("liminalis.admin.boon"))
+                .then(Commands.literal("list").executes(context -> list(context, type)))
+                .then(Commands.literal("info")
+                        .then(boonArgument(type).executes(context -> info(context, type))))
+                .then(Commands.literal("give")
+                        .then(playerArgument().then(boonArgument(type)
+                                .executes(context -> set(context, type)))))
+                .then(Commands.literal("clear")
+                        .then(playerArgument().executes(context -> clear(context, type))));
+    }
+
+    private int list(CommandContext<CommandSourceStack> context, ModifierType type) {
         CommandSender sender = context.getSource().getSender();
-        sender.sendMessage(Component.text("-- Blessings --", ACCENT));
-        for (Boon boon : boonsOf(ModifierType.BLESSING)) {
-            sender.sendMessage(Component.text("  " + boon.id(), VALUE));
-        }
-        sender.sendMessage(Component.text("-- Curses --", ACCENT));
-        for (Boon boon : boonsOf(ModifierType.CURSE)) {
-            sender.sendMessage(Component.text("  " + boon.id(), VALUE));
+        List<Boon> boons = boonsOf(type);
+        sender.sendMessage(Component.text(
+                "-- " + label(type) + " (" + boons.size() + ") --", ACCENT));
+        for (Boon boon : boons) {
+            sender.sendMessage(Component.text("  " + boon.id() + "  ", VALUE)
+                    .append(messages.get(boon.descriptionKey())));
         }
         return Command.SINGLE_SUCCESS;
     }
 
-    private int info(CommandContext<CommandSourceStack> context) {
+    private static String label(ModifierType type) {
+        return type == ModifierType.CURSE ? "Curses" : "Blessings";
+    }
+
+    private int info(CommandContext<CommandSourceStack> context, ModifierType type) {
         CommandSender sender = context.getSource().getSender();
-        Boon boon = boon(sender, context);
+        Boon boon = boon(sender, context, type);
         if (boon == null) {
             return Command.SINGLE_SUCCESS;
         }
@@ -117,10 +141,10 @@ public final class BoonCommands {
      * <p>A player carrying both a blessing and a curse is a state the roll can never produce,
      * so it must not be a state an admin command can produce either.
      */
-    private int set(CommandContext<CommandSourceStack> context) {
+    private int set(CommandContext<CommandSourceStack> context, ModifierType type) {
         CommandSender sender = context.getSource().getSender();
         PlayerProfile profile = profile(sender, context);
-        Boon boon = boon(sender, context);
+        Boon boon = boon(sender, context, type);
         if (profile == null || boon == null) {
             return Command.SINGLE_SUCCESS;
         }
@@ -142,15 +166,18 @@ public final class BoonCommands {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int clear(CommandContext<CommandSourceStack> context) {
+    /** Clears only the kind you asked about, so the command means exactly what it says. */
+    private int clear(CommandContext<CommandSourceStack> context, ModifierType type) {
         CommandSender sender = context.getSource().getSender();
         PlayerProfile profile = profile(sender, context);
         if (profile == null) {
             return Command.SINGLE_SUCCESS;
         }
-        if (profile.blessingId() == null && profile.curseId() == null) {
-            sender.sendMessage(Component.text(profile.lastKnownName()
-                    + " has neither a blessing nor a curse.", WARN));
+        boolean curse = type == ModifierType.CURSE;
+        String kind = curse ? "curse" : "blessing";
+        if ((curse ? profile.curseId() : profile.blessingId()) == null) {
+            sender.sendMessage(Component.text(
+                    profile.lastKnownName() + " has no " + kind + ".", WARN));
             return Command.SINGLE_SUCCESS;
         }
         if (!confirmations.submit(name(sender), "boon.clear:" + profile.id())) {
@@ -162,8 +189,11 @@ public final class BoonCommands {
         }
 
         String before = describeCurrent(profile);
-        profile.setBlessingId(null);
-        profile.setCurseId(null);
+        if (curse) {
+            profile.setCurseId(null);
+        } else {
+            profile.setBlessingId(null);
+        }
         persist(profile);
 
         sender.sendMessage(Component.text("Cleared " + before + " from "
@@ -199,21 +229,16 @@ public final class BoonCommands {
                 .toList();
     }
 
-    private List<Boon> allBoons() {
-        List<Boon> blessings = boonsOf(ModifierType.BLESSING);
-        List<Boon> curses = boonsOf(ModifierType.CURSE);
-        return java.util.stream.Stream.concat(blessings.stream(), curses.stream()).toList();
-    }
-
     private RequiredArgumentBuilder<CommandSourceStack, String> playerArgument() {
         return Commands.argument("player", StringArgumentType.word()).suggests(playerNames);
     }
 
-    private RequiredArgumentBuilder<CommandSourceStack, String> boonArgument() {
+    /** Completion is filtered to one kind, which is the whole point of the split. */
+    private RequiredArgumentBuilder<CommandSourceStack, String> boonArgument(ModifierType type) {
         return Commands.argument("boon", StringArgumentType.word())
                 .suggests((context, builder) -> {
                     String typed = builder.getRemainingLowerCase();
-                    for (Boon boon : allBoons()) {
+                    for (Boon boon : boonsOf(type)) {
                         if (boon.id().startsWith(typed)) {
                             builder.suggest(boon.id());
                         }
@@ -222,12 +247,23 @@ public final class BoonCommands {
                 });
     }
 
-    private Boon boon(CommandSender sender, CommandContext<CommandSourceStack> context) {
+    private Boon boon(CommandSender sender, CommandContext<CommandSourceStack> context,
+                      ModifierType type) {
         String id = StringArgumentType.getString(context, "boon");
         Modifier modifier = registry.find(id).orElse(null);
+        String kind = type == ModifierType.CURSE ? "curse" : "blessing";
+
         if (!(modifier instanceof Boon boon)) {
-            sender.sendMessage(Component.text("No blessing or curse called '" + id
-                    + "'. Try /liminalis boon list.", BAD));
+            sender.sendMessage(Component.text("No " + kind + " called " + id
+                    + ". Try /liminalis " + kind + " list.", BAD));
+            return null;
+        }
+        // Naming a curse on the blessing command is almost always a slip, and quietly doing
+        // it anyway is how somebody hands out a curse believing it was a gift.
+        if (boon.type() != type) {
+            String actual = boon.isCurse() ? "curse" : "blessing";
+            sender.sendMessage(Component.text(id + " is a " + actual + ", not a " + kind
+                    + ". Use /liminalis " + actual + " give.", BAD));
             return null;
         }
         return boon;

@@ -88,7 +88,7 @@ public final class PriestAbility implements Ability, DamageDealer {
      *
      * @return true if anything happened, so the caller knows whether to cancel the interact
      */
-    public boolean layHands(Player priest, Player target, int tier) {
+    public boolean layHands(Player priest, Player target) {
         long now = System.currentTimeMillis();
         long cooldown = (long) tuning.get("priest.heal-cooldown-seconds", 8) * 1000L;
         long ready = lastHeal.getOrDefault(priest.getUniqueId(), 0L) + cooldown;

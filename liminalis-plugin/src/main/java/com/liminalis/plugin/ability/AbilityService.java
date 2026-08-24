@@ -95,7 +95,7 @@ public final class AbilityService implements Listener {
         int tier = tierOf(user);
         boolean handled = user.isSneaking() && tier >= 3
                 ? priest.get().treat(user, target)
-                : priest.get().layHands(user, target, tier);
+                : priest.get().layHands(user, target);
 
         if (handled) {
             event.setCancelled(true);

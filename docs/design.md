@@ -1,17 +1,26 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0 (foundation), 1 (world rules) and 2 (lives, death & Limbo) complete,
-> verified on a real 1.21.11 server. Phase 3 (traits) is next.
+> **Status:** Phases 0-4 complete, verified on a real 1.21.11 server. Phase 5 (injuries and
+> mortal wounds) is next.
 >
-> **Limbo is an infinite pale garden**, which turned out better than the void expanse this
-> document originally described: the biome carries its own grey palette, dark fog, water tint
-> and ambient sound, all agreeing with each other, for free. Caves, structures and mobs are
-> generated off; difficulty is Peaceful; exhaustion is cancelled so saturation never drops.
+> **Limbo is a bare, treeless pale garden.** The biome carries its own grey palette, dark fog,
+> water tint and ambient sound for free. Caves, structures, mobs and decorations are all
+> generated off; surface generation stays on, so the pale moss ground remains with nothing
+> growing on it. Difficulty is Peaceful and exhaustion is cancelled, so saturation never drops.
 >
-> Known gaps, both deliberate:
-> - End crystals and player-ignited creepers are still not attributed as player damage.
-> - On the third death the player drops their inventory in the overworld, vanilla-style, so
->   anyone revived later returns empty-handed.
+> **Traits, blessings and curses are Java classes whose every number is read from config at
+> the point of use**, so `/liminalis reload` genuinely rebalances a live server rather than
+> reporting that it did. Two primitives carry most of the roster: `DynamicAttributeSource`
+> (Resilience and Coward are the same curve with different parameters) and `Restriction`
+> (the "cannot wear Protection IV" class of curse cost).
+>
+> Known gaps, all deliberate:
+> - End crystals and player-ignited creepers are not attributed as player damage.
+> - The third death drops your inventory in the overworld vanilla-style, so anyone revived
+>   later returns empty-handed.
+> - Turning Limbo decorations back on would only affect newly generated chunks.
+> - Curse costs are currently armour restrictions and attribute penalties. A held-item
+>   restriction (a curse that forbids swords) would need a new hook.
 
 ## Context
 

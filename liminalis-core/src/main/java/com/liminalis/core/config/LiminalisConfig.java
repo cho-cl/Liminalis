@@ -3,6 +3,7 @@ package com.liminalis.core.config;
 import com.liminalis.core.combat.CombatSettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
+import com.liminalis.core.roll.BoonRollSettings;
 
 /**
  * An immutable snapshot of every tunable value.
@@ -17,6 +18,8 @@ public record LiminalisConfig(
         LifeSettings lives,
         LimboSettings limbo,
         CombatSettings combat,
+        TraitSettings traits,
+        BoonRollSettings boons,
         boolean backupOnStart,
         int keepBackups,
         boolean debug) {
@@ -25,6 +28,8 @@ public record LiminalisConfig(
             LifeSettings.DEFAULTS,
             LimboSettings.DEFAULTS,
             CombatSettings.DEFAULTS,
+            TraitSettings.DEFAULTS,
+            BoonRollSettings.DEFAULTS,
             true,
             10,
             false);

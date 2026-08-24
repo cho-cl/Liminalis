@@ -18,6 +18,8 @@ permissions:
       liminalis.admin.data: true
       liminalis.admin.lives: true
       liminalis.admin.limbo: true
+      liminalis.admin.trait: true
+      liminalis.admin.boon: true
   liminalis.admin.reload:
     description: Reload config.yml and messages.yml.
     default: op
@@ -35,4 +37,10 @@ permissions:
     default: op
   liminalis.admin.limbo:
     description: Send players to Limbo, revive them, and inspect who is trapped there.
+    default: op
+  liminalis.admin.trait:
+    description: List, inspect, grant, remove and reroll player traits.
+    default: op
+  liminalis.admin.boon:
+    description: List, inspect, set and clear player blessings and curses.
     default: op

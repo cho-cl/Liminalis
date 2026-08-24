@@ -72,25 +72,41 @@ mean a feature can be exercised on demand rather than waiting on a 30-minute spa
 
 ## Status
 
-**Phases 0 (foundation), 1 (world rules) and 2 (lives, death & Limbo) complete.**
+**Phases 0-3 complete.**
 
-Phase 1 halves player-versus-player damage, halves healing from food, and buffs Regeneration.
+**Phase 1 - world rules.** PvP damage halved, food healing halved, Regeneration buffed.
 Damage is traced through projectiles, tamed pets and primed TNT to the player who really
 caused it, since halving only melee would move fighting to bows and wolves rather than reduce
 it. Each indirect source can be excluded in config.
 
-Phase 2 gives everyone three lives. The third death sends them to **Limbo**: an endless pale
-garden with no caves, no structures and nothing alive in it. Nothing there can hurt you,
-hunger never drops, and there is no way out - portals, teleports, other plugins' warps and
-logging back in elsewhere are all refused. The dead talk only to each other, though what they
-say occasionally bleeds through to the living worn down to the shape of a sentence. Once every
-fifteen minutes they may spend five minutes among the living as an unseen spectator.
+**Phase 2 - lives, death and Limbo.** Everyone gets three lives. The third death sends them to
+Limbo: an endless, treeless pale garden with no caves, structures or living things. Nothing
+there can hurt you, hunger never drops, and there is no way out - portals, teleports, other
+plugins' warps and logging back in elsewhere are all refused. The dead talk only to each
+other, though what they say occasionally bleeds through to the living worn down to the shape
+of a sentence. Once every fifteen minutes they may spend five minutes among the living as an
+unseen spectator.
 
-*Known gaps, both deliberate:* end crystals and player-ignited creepers are not attributed as
-player damage, because neither can be traced without tracking who placed them; and the third
-death drops your inventory in the overworld vanilla-style, so anyone revived later comes back
-with nothing.
+**Phase 3 - traits.** Everyone is rolled a trait on first join, a quarter get a second, and a
+few percent reach the Singularity tier. Small ones (Short, Swift Hands, Ironbound, Deep Lungs)
+sit alongside ones that change a fight (Resilience, Coward) and two that change what you can
+perceive (Deathsight, Stillness).
 
-Later phases - traits, blessings and curses, injuries, the Singularity, revival, abilities,
-the boss - are described in the design doc and built one at a time, each verified on a real
-server before the next.
+**Phase 4 - blessings and curses.** Fifteen percent of players are blessed, fifteen percent
+cursed, and the two are exclusive slices of one roll rather than two rolls in sequence - which
+is the difference between a 15% curse rate and a 12.75% one. A blessing is a straight gift. A
+curse is a bargain: a bigger gift than any blessing, paid for with something you would rather
+keep. Hollow gives three extra hearts and will not let heavy protection stay on you; Unshod
+makes you fast and barefoot forever.
+
+Every number across both phases lives in `config.yml` and is read at the moment it applies, so
+a rebalance takes effect on `/liminalis reload` with no restart.
+
+*Known gaps, all deliberate:* end crystals and player-ignited creepers are not attributed as
+player damage; the third death drops your inventory vanilla-style, so anyone revived later
+comes back with nothing; and re-enabling Limbo decorations would only affect newly generated
+chunks.
+
+Later phases - blessings and curses, injuries, the Singularity, revival, abilities, the boss -
+are described in the design doc and built one at a time, each verified on a real server before
+the next.

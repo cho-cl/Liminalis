@@ -279,6 +279,108 @@ class ConfigParserTest {
                 assertThat(error).contains("limbo.revival-lives"));
     }
 
+    // ------------------------------------------------------------------ traits section
+
+    @Test
+    void readsTheTraitRollChances() {
+        Map<String, Object> values = valid();
+        values.put("traits.second-trait-chance", 0.4);
+        values.put("traits.singularity-chance", 0.01);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().traits().roll().secondTraitChance()).isEqualTo(0.4);
+        assertThat(result.config().traits().roll().singularityChance()).isEqualTo(0.01);
+    }
+
+    @Test
+    void collectsTraitTuningNumbersWithoutKnowingWhatTheyAre() {
+        // The whole point of the tuning map: a new trait's numbers can be added here without
+        // the parser ever being taught that the trait exists.
+        Map<String, Object> values = valid();
+        values.put("traits.tuning.resilience.max-armor", 12.0);
+        values.put("traits.tuning.something.invented.later", 3);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().traits().tuning())
+                .containsEntry("resilience.max-armor", 12.0)
+                .containsEntry("something.invented.later", 3.0);
+    }
+
+    @Test
+    void rejectsATraitTuningValueThatIsNotANumber() {
+        Map<String, Object> values = valid();
+        values.put("traits.tuning.resilience.max-armor", "lots");
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("traits.tuning.resilience.max-armor"));
+    }
+
+    @Test
+    void anAbsentTraitsSectionUsesTheDefaults() {
+        ConfigResult result = ConfigParser.parse(valid());
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().traits()).isEqualTo(TraitSettings.DEFAULTS);
+    }
+
+    @Test
+    void rejectsASingularityChanceAboveOne() {
+        Map<String, Object> values = valid();
+        values.put("traits.singularity-chance", 2.0);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("traits.singularity-chance"));
+    }
+
+    // ------------------------------------------------------------------- boons section
+
+    @Test
+    void readsTheBlessingAndCurseChances() {
+        Map<String, Object> values = valid();
+        values.put("boons.blessing-chance", 0.2);
+        values.put("boons.curse-chance", 0.1);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().boons().blessingChance()).isEqualTo(0.2);
+        assertThat(result.config().boons().curseChance()).isEqualTo(0.1);
+    }
+
+    @Test
+    void rejectsBlessingAndCurseChancesThatCannotBothFit() {
+        // They are exclusive slices of one roll. Above 1.0 together, one of them is being
+        // silently squeezed out, and the configured rate would be a lie.
+        Map<String, Object> values = valid();
+        values.put("boons.blessing-chance", 0.7);
+        values.put("boons.curse-chance", 0.6);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anySatisfy(error ->
+                assertThat(error).contains("boons.blessing-chance"));
+    }
+
+    @Test
+    void acceptsChancesThatExactlyFill() {
+        Map<String, Object> values = valid();
+        values.put("boons.blessing-chance", 0.5);
+        values.put("boons.curse-chance", 0.5);
+
+        assertThat(ConfigParser.parse(values).valid()).isTrue();
+    }
+
     @Test
     void pvpDeathsCanBeSwitchedOff() {
         Map<String, Object> values = valid();

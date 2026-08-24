@@ -85,7 +85,9 @@ public final class LiminalisCommand {
         this.backupRunner = Objects.requireNonNull(backupRunner);
     }
 
-    public LiteralCommandNode<CommandSourceStack> build(LivesAndLimboCommands extra) {
+    public LiteralCommandNode<CommandSourceStack> build(LivesAndLimboCommands extra,
+                                                       TraitCommands traits,
+                                                       BoonCommands boons) {
         return Commands.literal("liminalis")
                 .requires(source -> source.getSender().hasPermission("liminalis.admin"))
                 .executes(this::showOverview)
@@ -95,6 +97,8 @@ public final class LiminalisCommand {
                 .then(dataTree())
                 .then(extra.livesTree())
                 .then(extra.limboTree())
+                .then(traits.tree())
+                .then(boons.tree())
                 .build();
     }
 
@@ -344,7 +348,7 @@ public final class LiminalisCommand {
 
         sender.sendMessage(field("verbose logging", debug.enabled() ? "on" : "off"));
         sender.sendMessage(Component.text(
-                "Subcommands: reload, profile, debug, data, lives, limbo", LABEL));
+                "Subcommands: reload, profile, debug, data, lives, limbo, trait, boon", LABEL));
         return Command.SINGLE_SUCCESS;
     }
 

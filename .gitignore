@@ -15,4 +15,7 @@ run/
 server/
 *.log
 
+# Built resource pack - rebuild with tools/build_pack.py
+dist/
+
 dependency-reduced-pom.xml

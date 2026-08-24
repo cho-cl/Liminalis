@@ -1,0 +1,76 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/bleeding.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue001"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/sprained_ankle.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue002"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/burns.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue003"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/concussion.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue004"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/punctured_lung.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue005"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/lost_arm.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue006"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/broken_legs.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue007"
+      ]
+    },
+    {
+      "type": "bitmap",
+      "file": "liminalis:font/injury/charred.png",
+      "ascent": 8,
+      "height": 10,
+      "chars": [
+        "\ue008"
+      ]
+    }
+  ]
+}

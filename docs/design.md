@@ -1,26 +1,30 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0-4 complete, verified on a real 1.21.11 server. Phase 5 (injuries and
-> mortal wounds) is next.
+> **Status:** Phases 0-5 complete, verified on a real 1.21.11 server. Phase 6 (the
+> Singularity) is next.
 >
-> **Limbo is a bare, treeless pale garden.** The biome carries its own grey palette, dark fog,
-> water tint and ambient sound for free. Caves, structures, mobs and decorations are all
-> generated off; surface generation stays on, so the pale moss ground remains with nothing
-> growing on it. Difficulty is Peaceful and exhaustion is cancelled, so saturation never drops.
+> **Limbo is a bare, treeless pale garden.** Caves, structures, mobs and decorations are all
+> generated off. Surface generation is taken over by hand and lays pale moss four blocks
+> deep - vanilla's pale garden gets its grey from decoration features rather than surface
+> rules, so removing the trees would otherwise have removed the grey with them.
 >
-> **Traits, blessings and curses are Java classes whose every number is read from config at
-> the point of use**, so `/liminalis reload` genuinely rebalances a live server rather than
-> reporting that it did. Two primitives carry most of the roster: `DynamicAttributeSource`
-> (Resilience and Coward are the same curve with different parameters) and `Restriction`
-> (the "cannot wear Protection IV" class of curse cost).
+> **Everything a player carries is one `Modifier`**, dispatched from a single listener and a
+> single tick loop. Three primitives carry the whole roster: `DynamicAttributeSource`
+> (Resilience and Coward are the same curve inverted), `Restriction` (the "cannot wear
+> Protection IV" class of curse cost), and `Ticking` (bleeding, Deathsight, Stillness).
+>
+> **Every number is read from config at the point of use**, never cached in a constructor,
+> so `/liminalis reload` genuinely rebalances a live server.
 >
 > Known gaps, all deliberate:
 > - End crystals and player-ignited creepers are not attributed as player damage.
 > - The third death drops your inventory in the overworld vanilla-style, so anyone revived
 >   later returns empty-handed.
 > - Turning Limbo decorations back on would only affect newly generated chunks.
-> - Curse costs are currently armour restrictions and attribute penalties. A held-item
->   restriction (a curse that forbids swords) would need a new hook.
+> - Mortal wounds have no treatment yet beyond dying. The ability that heals them arrives in
+>   Phase 8; until then, spending a life is the only cure.
+> - The injury HUD (pack-driven icons) is not built. Wounds are announced in chat and listed
+>   in `/profile`.
 
 ## Context
 

@@ -1,6 +1,7 @@
 package com.liminalis.core.config;
 
 import com.liminalis.core.combat.CombatSettings;
+import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
 import com.liminalis.core.roll.BoonRollSettings;
@@ -20,6 +21,7 @@ public record LiminalisConfig(
         CombatSettings combat,
         TraitSettings traits,
         BoonRollSettings boons,
+        InjurySettings injuries,
         boolean backupOnStart,
         int keepBackups,
         boolean debug) {
@@ -30,6 +32,7 @@ public record LiminalisConfig(
             CombatSettings.DEFAULTS,
             TraitSettings.DEFAULTS,
             BoonRollSettings.DEFAULTS,
+            InjurySettings.DEFAULTS,
             true,
             10,
             false);

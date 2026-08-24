@@ -19,6 +19,8 @@ import com.liminalis.plugin.command.TraitCommands;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.injury.Injuries;
 import com.liminalis.plugin.injury.InjuryService;
+import com.liminalis.plugin.rescue.RescueService;
+import com.liminalis.plugin.rescue.ThresholdStone;
 import com.liminalis.plugin.singularity.SingularityService;
 import com.liminalis.plugin.limbo.GhostVisitService;
 import com.liminalis.plugin.limbo.LimboChatListener;
@@ -71,6 +73,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private GhostVisitService ghosts;
     private InjuryService injuries;
     private SingularityService singularity;
+    private RescueService rescue;
     private ModifierRegistry registry;
 
     @Override
@@ -114,6 +117,8 @@ public final class LiminalisPlugin extends JavaPlugin {
         registerModifiers();
         injuries = new InjuryService(this, config, profiles, registry, modifiers, messages, debug);
         singularity = new SingularityService(this, config, profiles, limboWorld, messages, debug);
+        rescue = new RescueService(this, config, profiles, limbo, limboWorld, messages, debug);
+        ThresholdStone.registerRecipe(this, messages);
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
@@ -128,9 +133,11 @@ public final class LiminalisPlugin extends JavaPlugin {
                 this, config, profiles, registry, modifiers, messages, debug), this);
         getServer().getPluginManager().registerEvents(injuries, this);
         getServer().getPluginManager().registerEvents(singularity, this);
+        getServer().getPluginManager().registerEvents(rescue, this);
         modifiers.start();
         injuries.start();
         singularity.start();
+        rescue.start();
 
         registerCommands();
 
@@ -141,6 +148,9 @@ public final class LiminalisPlugin extends JavaPlugin {
     public void onDisable() {
         // Order matters: strip attribute modifiers before the profiles are flushed, so a
         // player's saved state never includes bonuses that only exist while we are running.
+        if (rescue != null) {
+            rescue.stop();
+        }
         if (singularity != null) {
             singularity.stop();
         }

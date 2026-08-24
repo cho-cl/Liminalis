@@ -4,6 +4,7 @@ import com.liminalis.core.combat.CombatSettings;
 import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
+import com.liminalis.core.rescue.RescueSettings;
 import com.liminalis.core.roll.BoonRollSettings;
 import com.liminalis.core.singularity.SingularitySettings;
 
@@ -24,6 +25,7 @@ public record LiminalisConfig(
         BoonRollSettings boons,
         InjurySettings injuries,
         SingularitySettings singularity,
+        RescueSettings rescue,
         boolean backupOnStart,
         int keepBackups,
         boolean debug) {
@@ -36,6 +38,7 @@ public record LiminalisConfig(
             BoonRollSettings.DEFAULTS,
             InjurySettings.DEFAULTS,
             SingularitySettings.DEFAULTS,
+            RescueSettings.DEFAULTS,
             true,
             10,
             false);

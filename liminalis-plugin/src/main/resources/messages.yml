@@ -200,7 +200,36 @@ singularity:
     lore: "<dark_gray>What is left when one of them stops.</dark_gray>"
 
 # ---------------------------------------------------------------------------------------
-# Later phases add their own sections: revival, abilities.
+# Rescue - crossing into the grey to fetch someone back
+# ---------------------------------------------------------------------------------------
+
+rescue:
+  stone:
+    name: "<gradient:#8f7fbf:#c9d6e3>Threshold Stone</gradient>"
+    lore-1: "<dark_gray>A way in. Not a way back.</dark_gray>"
+    lore-2: "<dark_gray>Single use.</dark_gray>"
+
+  crossed: "<gray><italic>The world thins, and lets you through.</italic></gray>"
+  warning: "<prefix><red>Be at the light when your time runs out.</red><gray> If you are not, the grey will take a life for letting you go - and if you have none, it will keep you.</gray>"
+
+  already-crossed: "<gray>You are already there.</gray>"
+  already-lost: "<gray>You cannot fetch anyone. You are what needs fetching.</gray>"
+  no-way-through: "<prefix><red>Nothing happens. The way is not open.</red>"
+
+  took-hold: "<prefix><white>You have hold of <player>.</white><gray> They are coming out with you.</gray>"
+  taken-hold: "<prefix><white><player> has hold of you.</white><gray> Do not let go.</gray>"
+  already-holding: "<gray>You already have hold of <player>.</gray>"
+
+  returned: "<gray><italic>You step back through, and the weight of the world returns.</italic></gray>"
+  returned-diminished: "<prefix><red>You were too slow.</red><gray> The grey let you go, and kept a life for the trouble.</gray>"
+  stranded: "<dark_red><italic>Your time ran out, and you had nothing left to give it.</italic></dark_red>"
+  stranded-broadcast: "<dark_gray><italic><white><player></white> went in after someone and did not come back.</italic></dark_gray>"
+
+  brought-back: "<white><player> carried you out of the grey.</white>"
+  brought-back-broadcast: "<dark_gray><italic><white><player></white> has been brought back by <white><rescuer></white>.</italic></dark_gray>"
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: abilities.
 # ---------------------------------------------------------------------------------------
 
 profile:

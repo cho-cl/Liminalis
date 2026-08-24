@@ -5,6 +5,7 @@ import com.liminalis.core.injury.InjurySettings;
 import com.liminalis.core.limbo.GhostVisitSettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
+import com.liminalis.core.rescue.RescueSettings;
 import com.liminalis.core.roll.BoonRollSettings;
 import com.liminalis.core.roll.TraitRollSettings;
 import com.liminalis.core.singularity.SingularitySettings;
@@ -45,6 +46,9 @@ public final class ConfigParser {
         BoonRollSettings boons = readBoons(reader);
         InjurySettings injuries = readInjuries(reader);
         SingularitySettings singularity = readSingularity(reader);
+        RescueSettings rescue = new RescueSettings(reader.wholeNumber(
+                "rescue.crossing-seconds",
+                (int) RescueSettings.DEFAULTS.crossingSeconds(), 30, 3600));
 
         boolean backupOnStart = reader.flag("storage.backup-on-start",
                 LiminalisConfig.DEFAULTS.backupOnStart());
@@ -58,7 +62,7 @@ public final class ConfigParser {
             return ConfigResult.failed(reader.errors);
         }
         return ConfigResult.ok(new LiminalisConfig(
-                lives, limbo, combat, traits, boons, injuries, singularity,
+                lives, limbo, combat, traits, boons, injuries, singularity, rescue,
                 backupOnStart, keepBackups, debug));
     }
 

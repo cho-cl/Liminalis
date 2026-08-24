@@ -117,15 +117,24 @@ The books are the only source of knowledge about any of this, and they are physi
 books rather than an unlockable codex - so they can be traded, hoarded, copied at a lectern
 and argued over. The knowledge spreading socially is the point.
 
+**Phase 7 - revival.** Nothing done from the living world reaches into Limbo, so someone has
+to go. A Threshold Stone - eight Singularity residue around an ender pearl, single use - opens
+a way. The rescuer crosses into the grey, finds the lost in fog with no landmarks, takes their
+hand, and walks back to the light they arrived at. The way in is the only way out, and losing
+track of it is the entire difficulty of the trip.
+
+Run the clock out and the grey takes a life for letting you go. Run it out with nothing left
+to give and it keeps you - the only way in the game to be lost without dying. Disconnecting
+mid-crossing is free: the risk should come from the grey, not the network.
+
 Every number across all phases lives in `config.yml` and is read at the moment it applies, so
 a rebalance takes effect on `/liminalis reload` with no restart.
 
-*Known gaps, all deliberate:* the fifth book stops short of revival instructions because the
-expedition it describes is Phase 7 and does not exist yet; end crystals and player-ignited
+*Known gaps, all deliberate:* end crystals and player-ignited
 creepers are not attributed as player damage; the third death drops your inventory
 vanilla-style; re-enabling Limbo decorations would only affect newly generated chunks; mortal
 wounds have no treatment yet beyond dying; and the injury HUD and Singularity textures both
 wait on a resource pack that has not been made.
 
-Later phases - revival, abilities, the boss - are described in the design doc and built one at a time, each verified on a real server before
+Later phases - abilities and the boss - are described in the design doc and built one at a time, each verified on a real server before
 the next.

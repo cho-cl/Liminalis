@@ -177,13 +177,15 @@ public final class LoreBooks {
     }
 
     /**
-     * The book that matters.
+     * The book the whole rescue loop hangs off.
      *
-     * <p>Deliberately short on specifics, because the expedition it describes is Phase 7 and
-     * does not exist yet. Writing step-by-step instructions for a mechanic that has not been
-     * built would be lying to players in the one place the design cannot afford it - this is
-     * the book the whole rescue loop hangs off. It states the shape of the answer and stops
-     * where the shape stops.
+     * <p>Written last, once the expedition actually existed. It carries real, followable
+     * instructions rather than hints, because this is the one document in the game that a
+     * player has to be able to act on - a book that gestured at a rescue nobody could
+     * perform would be worse than no book at all.
+     *
+     * <p>Everything stated here is true of the implementation: the recipe, that the way in is
+     * the way out, that holding someone is enough, and exactly what running out of time costs.
      */
     private static LoreBook onReturn() {
         return new LoreBook("on_return", "On Getting Them Back", "R.", List.of(
@@ -191,23 +193,57 @@ public final class LoreBooks {
                 Four came back. I said so at the beginning and I have been
                 asked about it every day since.
 
-                So: yes. It can be done. Stop reading if that was all you
-                needed.
+                So: yes. It can be done. What follows is how.
                 """,
                 """
                 It cannot be done from here.
 
                 I have tried every rite, every offering and every act of
-                will that has ever been suggested to me, and I have watched
-                other people try harder. Nothing done in this world reaches
-                into that one.
+                will that has ever been suggested to me. Nothing done in
+                this world reaches into that one.
+
+                Someone has to go and fetch them.
                 """,
                 """
-                Someone has to go and fetch them.
+                To open a way you will need what the creatures leave when
+                they stop. Eight pieces of it, set around a pearl.
 
-                Not a ritual. Not a bargain. A journey, made by the living,
-                to a place I have not yet been able to write down - and back
-                again, carrying someone who does not weigh anything.
+                It makes a stone. The stone is a door and it is only a door
+                once - it goes with you and does not come back.
+                """,
+                """
+                Hold it and you will be through.
+
+                Now attend, because this is the part that kills people.
+
+                The way in is the way out. Where you arrive, a light will
+                stand. That light is the only exit there is.
+                """,
+                """
+                The grey has no landmarks. None. You will walk twenty paces
+                and lose the light behind you and not believe how quickly it
+                happened.
+
+                Know where it is at every moment. If you have to choose
+                between finding them and finding your way back, you have
+                already made a mistake you cannot undo.
+                """,
+                """
+                When you find them, take their hand. That is all it takes.
+                They will come out with you.
+
+                Take as many as you can find. Nothing about holding a second
+                one is harder than the first.
+                """,
+                """
+                Be at the light when your time runs out.
+
+                If you are not, the grey will let you go and keep a life for
+                the trouble. If you had no life left to give it, it will not
+                let you go at all.
+
+                Do not send anyone in on their last one. Do not go in on
+                yours, unless the person you are going for is worth it.
                 """,
                 """
                 What comes back is not quite what went in. They arrive
@@ -215,15 +251,10 @@ public final class LoreBooks {
                 they never lose it.
 
                 They can feel the grey afterward. When something from that
-                side is nearby, they know. They will not tell you how.
-                """,
-                """
-                I am still working out the route.
+                side is close, they know.
 
-                If you are reading this and I have not finished, then either
-                I ran out of time or I went to check something myself.
-
-                Do not wait for me. Keep the ones you still have.
+                It is not much to carry. I have asked all four. Not one of
+                them would give it back.
                 """));
     }
 

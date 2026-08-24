@@ -1,34 +1,38 @@
 # Liminalis — Paper 1.21.11 Plugin
 
-> **Status:** Phases 0-6 complete, verified on a real 1.21.11 server. Phase 7 (revival) is
-> next, and is the one the whole rescue loop hangs off.
+> **Status:** Phases 0-7 complete. Phase 8 (abilities) is next, and is the one that runs
+> for the rest of the season - one hand-written ability per player, on request.
 >
-> **Limbo is a bare, treeless pale garden.** Caves, structures, mobs and decorations are all
-> generated off. Surface generation is taken over by hand and lays pale moss four blocks
-> deep - vanilla's pale garden gets its grey from decoration features rather than surface
-> rules, so removing the trees would otherwise have removed the grey with them.
+> **Revival is an expedition, not a rite.** Nothing done from the living world reaches into
+> Limbo. A living player crafts a Threshold Stone from eight Singularity residue around an
+> ender pearl, crosses over, finds the lost in featureless fog, takes their hand, and walks
+> back to the light they arrived at. The way in is the only way out.
+>
+> Run the clock out and the grey takes a life for letting you go. Run it out with no life to
+> give and it keeps you - which is the only way in the game to be lost without dying, and the
+> reason the rescue has weight. Disconnecting mid-crossing is free; the risk is meant to come
+> from the grey, not from the network.
+>
+> **The fifth book now carries real, followable instructions** - the recipe, that the way in
+> is the way out, that holding someone is enough, and exactly what running out of time costs.
+> It was deliberately left unfinished in Phase 6 and completed here, which was the promise.
+>
+> **Limbo is a bare, treeless pale garden.** Surface generation is done by hand and lays pale
+> moss four blocks deep - vanilla's pale garden gets its grey from decoration features rather
+> than surface rules, so removing the trees would otherwise have removed the grey too.
 >
 > **Everything a player carries is one `Modifier`**, dispatched from a single listener and a
-> single tick loop. Three primitives carry the whole roster: `DynamicAttributeSource`
-> (Resilience and Coward are the same curve inverted), `Restriction` (the "cannot wear
-> Protection IV" class of curse cost), and `Ticking` (bleeding, Deathsight, Stillness).
->
-> **Every number is read from config at the point of use**, never cached in a constructor,
-> so `/liminalis reload` genuinely rebalances a live server.
+> single tick loop, built on three primitives: `DynamicAttributeSource`, `Restriction` and
+> `Ticking`. Every number is read from config at the point of use, so `/liminalis reload`
+> genuinely rebalances a live server.
 >
 > Known gaps, all deliberate:
-> - The **fifth book, On Getting Them Back, deliberately stops short of instructions**,
->   because the expedition it describes is Phase 7 and does not exist yet. Writing steps for
->   a mechanic that has not been built would be lying to players in the one place the design
->   cannot afford it. Its final pages land with the mechanic.
 > - End crystals and player-ignited creepers are not attributed as player damage.
 > - The third death drops your inventory in the overworld vanilla-style.
 > - Turning Limbo decorations back on would only affect newly generated chunks.
 > - Mortal wounds have no treatment yet beyond dying; the healing ability is Phase 8.
-> - The injury HUD (pack-driven icons) is not built - wounds announce in chat and show in
->   `/profile`. It needs a resource pack, which does not exist yet.
-> - Singularity creatures use vanilla textures until that pack exists. Everything else about
->   them - attributes, names, auras, drops - is already theirs.
+> - The injury HUD and Singularity creature textures both wait on a resource pack that does
+>   not exist yet. Everything else about both systems is built.
 
 ## Context
 

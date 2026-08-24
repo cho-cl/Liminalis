@@ -3,9 +3,11 @@ package com.liminalis.plugin.config;
 import com.liminalis.core.config.ConfigParser;
 import com.liminalis.core.config.ConfigResult;
 import com.liminalis.core.config.LiminalisConfig;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,7 +45,7 @@ public final class ConfigService {
         plugin.reloadConfig();
 
         FileConfiguration yaml = plugin.getConfig();
-        Map<String, Object> values = yaml.getValues(true);
+        Map<String, Object> values = flatten(yaml);
 
         ConfigResult result = ConfigParser.parse(values);
         if (!result.valid()) {
@@ -56,6 +58,23 @@ public final class ConfigService {
 
         current = result.config();
         return List.of();
+    }
+
+    /**
+     * Flattens the config to {@code path -> value}, dropping the intermediate section nodes.
+     *
+     * <p>{@code getValues(true)} returns a {@link ConfigurationSection} for every branch as
+     * well as the leaves. Core has no idea what those are and should not have to - stripping
+     * them here keeps the parser working in plain values.
+     */
+    private static Map<String, Object> flatten(FileConfiguration yaml) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : yaml.getValues(true).entrySet()) {
+            if (!(entry.getValue() instanceof ConfigurationSection)) {
+                values.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return values;
     }
 
     /**

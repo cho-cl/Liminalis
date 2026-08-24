@@ -5,8 +5,11 @@ import com.liminalis.core.profile.ProfileModifierIds;
 import com.liminalis.plugin.modifier.capability.AttributeContribution;
 import com.liminalis.plugin.modifier.capability.AttributeSource;
 import com.liminalis.plugin.modifier.capability.DynamicAttributeSource;
+import com.liminalis.plugin.modifier.capability.Restriction;
 import com.liminalis.plugin.modifier.capability.Ticking;
 import com.liminalis.plugin.profile.ProfileManager;
+import com.liminalis.plugin.text.Messages;
+import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
@@ -18,6 +21,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -50,6 +54,7 @@ public final class ModifierService implements Listener {
     private final JavaPlugin plugin;
     private final ModifierRegistry registry;
     private final ProfileManager profiles;
+    private final Messages messages;
     private final String namespace;
 
     private final Map<UUID, List<Modifier>> attached = new ConcurrentHashMap<>();
@@ -59,10 +64,12 @@ public final class ModifierService implements Listener {
 
     private BukkitTask tickTask;
 
-    public ModifierService(JavaPlugin plugin, ModifierRegistry registry, ProfileManager profiles) {
+    public ModifierService(JavaPlugin plugin, ModifierRegistry registry,
+                           ProfileManager profiles, Messages messages) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.registry = Objects.requireNonNull(registry, "registry");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.namespace = plugin.getName().toLowerCase(Locale.ROOT);
     }
 
@@ -210,6 +217,60 @@ public final class ModifierService implements Listener {
                 }
             }
         }
+    }
+
+    /**
+     * Refuses armour that an attached {@link Restriction} forbids.
+     *
+     * <p>Handled here rather than by each curse registering its own listener, for the same
+     * reason as everything else in this class: one handler, deterministic order, and no
+     * accumulation of listeners as the roster grows.
+     *
+     * <p>The piece is put back into the inventory rather than dropped or destroyed. A curse
+     * should cost a player their Protection IV, not their diamonds.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onArmorChange(PlayerArmorChangeEvent event) {
+        ItemStack worn = event.getNewItem();
+        if (worn == null || worn.getType().isAir()) {
+            return;
+        }
+        Player player = event.getPlayer();
+        for (Modifier modifier : attachedTo(player)) {
+            if (!(modifier instanceof Restriction restriction)) {
+                continue;
+            }
+            boolean forbidden;
+            try {
+                forbidden = restriction.forbidsWearing(player, worn);
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.SEVERE,
+                        "Restriction '" + modifier.id() + "' threw for " + player.getName(), e);
+                continue;
+            }
+            if (forbidden) {
+                refuse(player, worn, restriction);
+                return;
+            }
+        }
+    }
+
+    private void refuse(Player player, ItemStack worn, Restriction restriction) {
+        ItemStack removed = worn.clone();
+        // Next tick: the equip is still being applied as this event fires, and clearing the
+        // slot inside the event would be undone by the change that triggered it.
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            player.getInventory().remove(worn);
+            player.getInventory().addItem(removed).values()
+                    .forEach(leftover -> player.getWorld().dropItem(player.getLocation(), leftover));
+            messages.send(player, restriction.refusalKey());
+        });
+        debugRefusal(player, restriction);
+    }
+
+    private void debugRefusal(Player player, Restriction restriction) {
+        plugin.getLogger().fine(() -> "refused armour for " + player.getName()
+                + " due to " + restriction.id());
     }
 
     // ----------------------------------------------------------------------------- tick

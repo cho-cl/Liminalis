@@ -52,6 +52,55 @@ storage:
   # Must be at least 1 - to turn backups off, use backup-on-start above.
   keep-backups: 10
 
+traits:
+  # Everyone gets one trait on their first join. This is the chance of a second.
+  second-trait-chance: 0.25
+
+  # The chance that any individual trait slot reaches into the Singularity pool
+  # instead of the ordinary one. Applied per slot, so a player with two traits has
+  # roughly twice this chance of seeing one at all.
+  singularity-chance: 0.03
+
+  # Every number the traits themselves use. Change one and run /liminalis reload -
+  # traits read these at the moment they apply, so a rebalance takes effect at once
+  # without a restart. Keys nobody reads are ignored, so leftovers are harmless.
+  tuning:
+    short.scale: -0.10
+    swift_hands.break-speed: 0.30
+    ironbound.armor: 2.0
+    deep_lungs.oxygen: 4.0
+    resilience.max-armor: 8.0
+    coward.max-bonus-damage: 3.0
+    coward.max-penalty-damage: 2.0
+    deathsight.range: 48.0
+    stillness.heal-per-half-second: 0.35
+    mark_of_return.sense-range: 24.0
+
+    # Blessings - modest, and free.
+    ironblood.health: 6.0
+    far_wanderer.speed: 0.12
+    steady_hand.attack: 1.5
+    thickskinned.toughness: 3.0
+    long_arms.reach: 1.0
+
+    # Curses - a bigger gift than any blessing, and a real cost for it.
+    hollow.health: 6.0
+    hollow.max-protection-level: 2
+    unshod.speed: 0.22
+    brittle.attack: 4.0
+    brittle.armor-penalty: 6.0
+    swiftbane.armor: 8.0
+    swiftbane.speed-penalty: 0.25
+    shallow_lungs.attack: 3.0
+    shallow_lungs.oxygen-penalty: 10.0
+
+boons:
+  # A blessing is a straight upside. A curse is a larger upside paid for with a real
+  # cost. They are mutually exclusive slices of one roll, so these two must not add up
+  # to more than 1.0 - the rest of the population gets neither.
+  blessing-chance: 0.15
+  curse-chance: 0.15
+
 combat:
   # Damage one player causes another is multiplied by this. 0.5 halves it.
   # Set to 1.0 for vanilla PvP. Must be between 0.0 and 10.0.

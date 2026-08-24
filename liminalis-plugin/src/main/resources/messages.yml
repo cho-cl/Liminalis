@@ -54,8 +54,99 @@ ghost:
   nowhere-to-go: "<prefix><red>There is nowhere to return to.</red>"
 
 # ---------------------------------------------------------------------------------------
-# Later phases add their own sections: traits, blessings and curses, injuries,
-# the Singularity, revival, abilities.
+# Traits
+#
+# Each trait needs a .name and a .description under trait.<id>. They are shown on first
+# join and whenever a player runs /profile. Write them as the world describing someone,
+# not as a stat block - the numbers live in config.yml.
+# ---------------------------------------------------------------------------------------
+
+traits:
+  reveal-header: "<prefix><gray><italic>Something about you was already decided.</italic></gray>"
+  reveal-entry: "<white>  <trait></white><newline><dark_gray>    <description></dark_gray>"
+  reveal-singularity: "<gradient:#8f7fbf:#c9d6e3>  <trait></gradient> <dark_gray><italic>(this one should not exist)</italic></dark_gray><newline><dark_gray>    <description></dark_gray>"
+  reveal-none: "<gray>  Nothing. You are entirely ordinary.</gray>"
+
+trait:
+  short:
+    name: "Short"
+    description: "You are smaller than everyone else, and your reach is shorter for it."
+  swift_hands:
+    name: "Swift Hands"
+    description: "Stone gives way under your tools faster than it should."
+  ironbound:
+    name: "Ironbound"
+    description: "Something in you is harder than flesh. Blows land softer."
+  deep_lungs:
+    name: "Deep Lungs"
+    description: "You can stay under far longer than is reasonable."
+  resilience:
+    name: "Resilience"
+    description: "The closer you are to death, the harder you are to finish."
+  coward:
+    name: "Coward"
+    description: "Untouched, you hit like a beast. Bloodied, you falter."
+  deathsight:
+    name: "Deathsight"
+    description: "You can see the dead when they walk among the living. No one else can."
+  stillness:
+    name: "Stillness"
+    description: "Your wounds close only while you do not move at all."
+
+mark:
+  mark_of_return:
+    name: "Mark of Return"
+    description: "You have been to the other side. You can feel it when something from there is close."
+
+# ---------------------------------------------------------------------------------------
+# Blessings and curses
+#
+# A curse needs a .refused line if it forbids wearing something - that is what a player
+# sees when the game takes the piece back off them.
+# ---------------------------------------------------------------------------------------
+
+boons:
+  reveal-blessing: "<green>  Blessed: <name></green><newline><dark_gray>    <description></dark_gray>"
+  reveal-curse: "<dark_red>  Cursed: <name></dark_red><newline><dark_gray>    <description></dark_gray>"
+
+blessing:
+  ironblood:
+    name: "Ironblood"
+    description: "There is more of you to lose. Three hearts more."
+  far_wanderer:
+    name: "Far Wanderer"
+    description: "Distance means less to you than it does to other people."
+  steady_hand:
+    name: "Steady Hand"
+    description: "You have never missed anything you meant to hit."
+  thickskinned:
+    name: "Thick-Skinned"
+    description: "What armour you wear works harder than it should."
+  long_arms:
+    name: "Long Arms"
+    description: "You reach things other people have to step towards."
+
+curse:
+  hollow:
+    name: "Hollow"
+    description: "Three hearts more than anyone, and heavy protection will not stay on you."
+    refused: "<prefix><dark_red>The weight of it will not sit on you. Something in you refuses.</dark_red>"
+  unshod:
+    name: "Unshod"
+    description: "You move like something hunted. You will never wear boots again."
+    refused: "<prefix><dark_red>They will not stay on your feet.</dark_red>"
+  brittle:
+    name: "Brittle"
+    description: "You hit far harder than you should, and you break far more easily."
+  swiftbane:
+    name: "Swiftbane"
+    description: "Almost nothing can hurt you. You will never outrun anything again."
+  shallow_lungs:
+    name: "Shallow Lungs"
+    description: "Strength enough for anything but water. Do not go under."
+
+# ---------------------------------------------------------------------------------------
+# Later phases add their own sections: injuries, the Singularity, revival, abilities.
 # ---------------------------------------------------------------------------------------
 
 profile:

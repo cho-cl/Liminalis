@@ -4,8 +4,11 @@ import com.liminalis.core.combat.CombatSettings;
 import com.liminalis.core.limbo.GhostVisitSettings;
 import com.liminalis.core.limbo.LimboSettings;
 import com.liminalis.core.lives.LifeSettings;
+import com.liminalis.core.roll.BoonRollSettings;
+import com.liminalis.core.roll.TraitRollSettings;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +39,8 @@ public final class ConfigParser {
         LifeSettings lives = readLives(reader);
         LimboSettings limbo = readLimbo(reader);
         CombatSettings combat = readCombat(reader);
+        TraitSettings traits = readTraits(reader);
+        BoonRollSettings boons = readBoons(reader);
 
         boolean backupOnStart = reader.flag("storage.backup-on-start",
                 LiminalisConfig.DEFAULTS.backupOnStart());
@@ -49,7 +54,7 @@ public final class ConfigParser {
             return ConfigResult.failed(reader.errors);
         }
         return ConfigResult.ok(new LiminalisConfig(
-                lives, limbo, combat, backupOnStart, keepBackups, debug));
+                lives, limbo, combat, traits, boons, backupOnStart, keepBackups, debug));
     }
 
     private static LifeSettings readLives(Reader reader) {
@@ -74,6 +79,36 @@ public final class ConfigParser {
                 reader.wholeNumber("limbo.revival-lives", defaults.revivalLives(), 1, 100),
                 reader.fraction("limbo.whisper-chance", defaults.whisperChance()),
                 new GhostVisitSettings(visitSeconds * 1000L, cooldownSeconds * 1000L));
+    }
+
+    private static TraitSettings readTraits(Reader reader) {
+        TraitRollSettings defaults = TraitRollSettings.DEFAULTS;
+        return new TraitSettings(
+                new TraitRollSettings(
+                        reader.fraction("traits.second-trait-chance",
+                                defaults.secondTraitChance()),
+                        reader.fraction("traits.singularity-chance",
+                                defaults.singularityChance())),
+                reader.numbersUnder("traits.tuning."));
+    }
+
+    /**
+     * Blessing and curse chances.
+     *
+     * <p>The two are checked together as well as individually: they are mutually exclusive
+     * slices of one roll, so a pair that sums above 1.0 is not a config anyone meant to
+     * write, and silently clamping it would make the curse rate a lie.
+     */
+    private static BoonRollSettings readBoons(Reader reader) {
+        BoonRollSettings defaults = BoonRollSettings.DEFAULTS;
+        double blessing = reader.fraction("boons.blessing-chance", defaults.blessingChance());
+        double curse = reader.fraction("boons.curse-chance", defaults.curseChance());
+
+        if (blessing + curse > 1.0) {
+            reader.errors.add("boons.blessing-chance + boons.curse-chance: must not exceed"
+                    + " 1.0 together, but they add up to " + (blessing + curse));
+        }
+        return new BoonRollSettings(blessing, curse);
     }
 
     private static CombatSettings readCombat(Reader reader) {
@@ -184,6 +219,31 @@ public final class ConfigParser {
                 return fallback;
             }
             return text;
+        }
+
+        /**
+         * Every numeric value beneath a prefix, keyed with the prefix stripped.
+         *
+         * <p>Open-ended on purpose so trait numbers can be added and rebalanced without this
+         * parser needing to know they exist. Anything non-numeric under the prefix is
+         * reported, since a string where a number belongs is a typo worth surfacing. The
+         * caller is responsible for not passing intermediate YAML nodes in.
+         */
+        private Map<String, Double> numbersUnder(String prefix) {
+            Map<String, Double> found = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                String path = entry.getKey();
+                if (!path.startsWith(prefix) || path.length() == prefix.length()) {
+                    continue;
+                }
+                Object raw = entry.getValue();
+                if (raw instanceof Number number) {
+                    found.put(path.substring(prefix.length()), number.doubleValue());
+                } else {
+                    errors.add(path + ": expected a number but found " + describe(raw));
+                }
+            }
+            return found;
         }
 
         private int error(String path, String problem, int fallback) {

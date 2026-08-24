@@ -4,11 +4,16 @@ import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.JsonProfileStore;
 import com.liminalis.core.profile.ProfileBackup;
 import com.liminalis.core.profile.ProfileStore;
+import com.liminalis.plugin.boon.Blessings;
+import com.liminalis.plugin.boon.Curses;
 import com.liminalis.plugin.combat.CombatListener;
 import com.liminalis.plugin.command.AuditLog;
+import com.liminalis.plugin.command.BoonCommands;
 import com.liminalis.plugin.command.LimboPlayerCommand;
 import com.liminalis.plugin.command.LiminalisCommand;
 import com.liminalis.plugin.command.LivesAndLimboCommands;
+import com.liminalis.plugin.command.ProfileCommand;
+import com.liminalis.plugin.command.TraitCommands;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.limbo.GhostVisitService;
 import com.liminalis.plugin.limbo.LimboChatListener;
@@ -19,6 +24,11 @@ import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
+import com.liminalis.plugin.trait.FirstJoinService;
+import com.liminalis.plugin.trait.MarkOfReturn;
+import com.liminalis.plugin.trait.OrdinaryTraits;
+import com.liminalis.plugin.trait.SingularityTraits;
+import com.liminalis.plugin.trait.TraitTuning;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -54,6 +64,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private LimboWorld limboWorld;
     private LimboService limbo;
     private GhostVisitService ghosts;
+    private ModifierRegistry registry;
 
     @Override
     public void onEnable() {
@@ -85,13 +96,15 @@ public final class LiminalisPlugin extends JavaPlugin {
                     getLogger().info("Backed up profiles to " + path.getFileName() + "."));
         }
 
-        ModifierRegistry registry = new ModifierRegistry();
-        modifiers = new ModifierService(this, registry, profiles);
-
         limboWorld = new LimboWorld(this, config);
         limboWorld.createOrLoad();
+
+        registry = new ModifierRegistry();
+        modifiers = new ModifierService(this, registry, profiles, messages);
         limbo = new LimboService(this, profiles, limboWorld, messages, debug);
         ghosts = new GhostVisitService(this, config, profiles, limbo, messages, debug);
+
+        registerModifiers();
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
@@ -102,9 +115,11 @@ public final class LiminalisPlugin extends JavaPlugin {
                 new LimboChatListener(this, config, profiles, messages, debug), this);
         getServer().getPluginManager().registerEvents(
                 new DeathListener(this, config, profiles, messages, debug), this);
+        getServer().getPluginManager().registerEvents(new FirstJoinService(
+                this, config, profiles, registry, modifiers, messages, debug), this);
         modifiers.start();
 
-        registerCommands(registry);
+        registerCommands();
 
         getLogger().info("Liminalis enabled - " + registry.size() + " modifier(s) registered.");
     }
@@ -124,7 +139,22 @@ public final class LiminalisPlugin extends JavaPlugin {
         }
     }
 
-    private void registerCommands(ModifierRegistry registry) {
+    /**
+     * Builds every modifier this build knows how to apply.
+     *
+     * <p>Tuning is read through a supplier rather than copied, so /liminalis reload
+     * rebalances a live server instead of merely reporting that it did.
+     */
+    private void registerModifiers() {
+        TraitTuning tuning = new TraitTuning(() -> config.get().traits().tuning());
+        OrdinaryTraits.all(tuning).forEach(registry::register);
+        SingularityTraits.all(tuning, limbo).forEach(registry::register);
+        Blessings.all(tuning).forEach(registry::register);
+        Curses.all(tuning).forEach(registry::register);
+        registry.register(new MarkOfReturn(tuning, limbo));
+    }
+
+    private void registerCommands() {
         AuditLog audit = new AuditLog(this);
         ConfirmationTracker confirmations =
                 new ConfirmationTracker(CONFIRMATION_WINDOW_MILLIS, System::currentTimeMillis);
@@ -136,15 +166,24 @@ public final class LiminalisPlugin extends JavaPlugin {
                 config, profiles, limbo, audit, confirmations, command.knownPlayers());
         LimboPlayerCommand limboCommand =
                 new LimboPlayerCommand(profiles, limbo, ghosts, messages);
+        ProfileCommand profileCommand =
+                new ProfileCommand(config, profiles, registry, messages);
+        TraitCommands traitCommands = new TraitCommands(config, profiles, registry, modifiers,
+                messages, audit, confirmations, command.knownPlayers());
+        BoonCommands boonCommands = new BoonCommands(profiles, registry, modifiers,
+                messages, audit, confirmations, command.knownPlayers());
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(
-                    command.build(livesAndLimbo),
+                    command.build(livesAndLimbo, traitCommands, boonCommands),
                     "Liminalis administration",
                     List.of("lim"));
             event.registrar().register(
                     limboCommand.build(),
                     "For those with no lives left");
+            event.registrar().register(
+                    profileCommand.build(),
+                    "What you are");
         });
     }
 

@@ -220,9 +220,23 @@ public final class RescueService implements Listener {
                 complete(rescuer, RescueRules.expire(profiles.of(rescuer), now));
                 continue;
             }
-            if (rescuer.getWorld().equals(crossing.door.getWorld())
+            boolean atDoor = rescuer.getWorld().equals(crossing.door.getWorld())
                     && rescuer.getLocation().distanceSquared(crossing.door)
-                        <= EXIT_RADIUS * EXIT_RADIUS) {
+                        <= EXIT_RADIUS * EXIT_RADIUS;
+
+            // You arrive standing on the exit, so stepping through it has to mean coming
+            // BACK to it. Without this the first sweep a second later found the rescuer
+            // still on the threshold and sent them straight home again - the crossing
+            // lasted about one second and looked completely broken.
+            if (!crossing.steppedAway) {
+                if (!atDoor) {
+                    crossing.steppedAway = true;
+                }
+                tellTime(rescuer, crossing, now);
+                continue;
+            }
+
+            if (atDoor) {
                 complete(rescuer, RescueRules.returnFrom(profiles.of(rescuer)));
                 continue;
             }
@@ -248,8 +262,9 @@ public final class RescueService implements Listener {
                 : secondsLeft <= 60 ? NamedTextColor.GOLD : NamedTextColor.GRAY;
 
         String door = distance < 0 ? "?" : Math.round(distance) + "m";
+        String state = crossing.steppedAway ? "door " + door : "step off the light to begin";
         rescuer.sendActionBar(Component.text(
-                secondsLeft + "s   door " + door
+                secondsLeft + "s   " + state
                         + (crossing.carried.isEmpty() ? ""
                             : "   holding " + crossing.carried.size()), colour));
     }
@@ -337,6 +352,14 @@ public final class RescueService implements Listener {
         private final Location door;
         private final long deadline;
         private final Set<UUID> carried = new LinkedHashSet<>();
+
+        /**
+         * Whether they have left the arrival point yet.
+         *
+         * <p>The door is both entrance and exit, and you start on it. Until you have walked
+         * off it once, standing there means "just arrived" rather than "ready to leave".
+         */
+        private boolean steppedAway;
 
         private Crossing(Location home, Location door, long deadline) {
             this.home = home;

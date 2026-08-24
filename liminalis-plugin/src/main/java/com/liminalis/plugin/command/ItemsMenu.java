@@ -1,5 +1,6 @@
 package com.liminalis.plugin.command;
 
+import com.liminalis.plugin.ability.AbilityFocus;
 import com.liminalis.plugin.rescue.ThresholdStone;
 import com.liminalis.plugin.singularity.LoreBooks;
 import com.liminalis.plugin.singularity.SingularityResidue;
@@ -7,6 +8,7 @@ import com.liminalis.plugin.text.Messages;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Material;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -66,6 +68,8 @@ public final class ItemsMenu implements Listener, InventoryHolder {
                 "The accelerant. Sneak-right-click to feed an ability.");
         add(ThresholdStone.create(plugin, messages), "Threshold Stone",
                 "Opens a way into the grey. Single use.");
+        add(AbilityFocus.create(plugin, messages, "priest", Material.STICK), "Healing Staff",
+                "A Priest must hold this to use /ability.");
 
         // Books go on the second row, so the two functional items are not lost among them.
         while (contents.size() < 9) {

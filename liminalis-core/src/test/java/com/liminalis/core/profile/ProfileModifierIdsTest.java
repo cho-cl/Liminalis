@@ -1,5 +1,6 @@
 package com.liminalis.core.profile;
 
+import com.liminalis.core.injury.ActiveInjury;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -30,6 +31,30 @@ class ProfileModifierIdsTest {
 
         assertThat(ProfileModifierIds.referencedBy(p)).containsExactlyInAnyOrder(
                 "resilience", "coward", "ironblood", "hollow", "mark_of_return", "priest");
+    }
+
+    @Test
+    void injuriesAreModifiersToo() {
+        // The bug this catches shipped: injuries were stored in their own list and never
+        // read here, so nothing ever attached them. Wounds showed up on the HUD and in
+        // /profile while doing absolutely nothing - no attribute penalty, no bleeding tick.
+        PlayerProfile p = profile();
+        p.addInjury(new ActiveInjury("bleeding", 1_700_000_600_000L));
+        p.addInjury(new ActiveInjury("lost_arm", 0L));
+
+        assertThat(ProfileModifierIds.referencedBy(p))
+                .contains("bleeding", "lost_arm");
+    }
+
+    @Test
+    void injuriesSitAlongsideEverythingElse() {
+        PlayerProfile p = profile();
+        p.addTrait("resilience");
+        p.setCurseId("hollow");
+        p.addInjury(new ActiveInjury("burns", 1_700_000_600_000L));
+
+        assertThat(ProfileModifierIds.referencedBy(p))
+                .containsExactlyInAnyOrder("resilience", "hollow", "burns");
     }
 
     @Test

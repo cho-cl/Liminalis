@@ -23,6 +23,7 @@ import com.liminalis.plugin.command.ProfileCommand;
 import com.liminalis.plugin.command.TraitCommands;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.injury.Injuries;
+import com.liminalis.plugin.injury.OffhandBlocker;
 import com.liminalis.plugin.hud.PlayerHud;
 import com.liminalis.plugin.injury.InjuryService;
 import com.liminalis.plugin.rescue.RescueService;
@@ -84,6 +85,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private RescueService rescue;
     private AbilityService abilities;
     private PlayerHud hud;
+    private OffhandBlocker offhand;
     private ModifierRegistry registry;
 
     @Override
@@ -132,6 +134,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         abilities = new AbilityService(this, config, profiles, registry, modifiers,
                 rescue, messages, debug);
         hud = new PlayerHud(this, config, profiles, registry, singularity);
+        offhand = new OffhandBlocker(this, profiles, messages);
 
         getServer().getPluginManager().registerEvents(profiles, this);
         getServer().getPluginManager().registerEvents(modifiers, this);
@@ -148,11 +151,13 @@ public final class LiminalisPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(singularity, this);
         getServer().getPluginManager().registerEvents(rescue, this);
         getServer().getPluginManager().registerEvents(abilities, this);
+        getServer().getPluginManager().registerEvents(offhand, this);
         modifiers.start();
         injuries.start();
         singularity.start();
         rescue.start();
         hud.start();
+        offhand.start();
 
         // Validates every page fits a real book. Called here rather than left until the
         // first one drops, so an unreadable page is a startup failure on the machine of
@@ -168,6 +173,9 @@ public final class LiminalisPlugin extends JavaPlugin {
     public void onDisable() {
         // Order matters: strip attribute modifiers before the profiles are flushed, so a
         // player's saved state never includes bonuses that only exist while we are running.
+        if (offhand != null) {
+            offhand.stop();
+        }
         if (hud != null) {
             hud.stop();
         }
@@ -231,7 +239,7 @@ public final class LiminalisPlugin extends JavaPlugin {
                 injuries, messages, audit, command.knownPlayers());
         SingularityCommands singularityCommands = new SingularityCommands(this, singularity,
                 messages, audit, command.knownPlayers());
-        AbilityCommands abilityCommands = new AbilityCommands(profiles, registry, modifiers,
+        AbilityCommands abilityCommands = new AbilityCommands(this, profiles, registry, modifiers,
                 messages, audit, confirmations, command.knownPlayers());
         ItemsMenu itemsMenu = new ItemsMenu(this, messages);
         getServer().getPluginManager().registerEvents(itemsMenu, this);

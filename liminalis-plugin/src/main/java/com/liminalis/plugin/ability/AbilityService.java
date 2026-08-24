@@ -97,6 +97,15 @@ public final class AbilityService implements Listener {
      * state of the world.
      */
     public void fire(Player user, Ability ability, Power power, Player target) {
+        // The focus has to be in hand. It makes an ability visible across a field and makes
+        // using one a decision, because the hand holding a staff is not holding a sword.
+        if (!AbilityFocus.held(plugin, user, ability.id())) {
+            messages.send(user, "ability.focus.missing",
+                    Messages.placeholder("focus",
+                            messages.get("ability." + ability.id() + ".focus.name")));
+            return;
+        }
+
         long remaining = cooldownRemaining(user, power);
         if (remaining > 0) {
             messages.send(user, "ability.cooling",

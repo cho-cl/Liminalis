@@ -204,6 +204,8 @@ injury:
   lost_arm:
     name: "Lost Arm"
     description: "It is gone. You will not get it back in this body."
+    refused: "<prefix><dark_red>You have nothing to hold it with.</dark_red>"
+    dropped: "<prefix><dark_red>It falls out of a hand you no longer have.</dark_red>"
   broken_legs:
     name: "Broken Legs"
     description: "They are not going to set themselves. You crawl now."
@@ -289,12 +291,18 @@ ability:
   cooling: "<gray>Not yet. <white><seconds>s</white>.</gray>"
   failed: "<red>Something went wrong. It has been logged.</red>"
   no-target: "<gray>Look at someone first, or name them: </gray><white>/ability <slot> <player></white>"
+  focus:
+    missing: "<gray>You need to be holding your <white><focus></white>.</gray>"
+    hold-it: "<dark_gray>Hold this to use your ability.</dark_gray>"
   no-such-player: "<gray><player> is not here.</gray>"
   too-far: "<gray><player> is too far away.</gray>"
 
   priest:
     name: "Priest"
     description: "You can put your hands on someone and make them better."
+    focus:
+      name: "<gradient:#c9d6e3:#8f7fbf>Healing Staff</gradient>"
+      lore: "<dark_gray>Worn smooth where a hand has always been.</dark_gray>"
     tier1: "Lay Hands"
     tier2: "Mend Self"
     tier3: "Holy Smite"

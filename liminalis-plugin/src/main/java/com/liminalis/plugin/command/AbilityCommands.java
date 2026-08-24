@@ -5,6 +5,7 @@ import com.liminalis.core.ability.TierRequirement;
 import com.liminalis.core.command.ConfirmationTracker;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.ability.Ability;
+import com.liminalis.plugin.ability.AbilityFocus;
 import com.liminalis.plugin.modifier.Modifier;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
@@ -25,6 +26,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 import java.util.Objects;
@@ -56,14 +59,17 @@ public final class AbilityCommands {
     private final AuditLog audit;
     private final ConfirmationTracker confirmations;
     private final SuggestionProvider<CommandSourceStack> playerNames;
+    private final JavaPlugin plugin;
 
-    public AbilityCommands(ProfileManager profiles,
+    public AbilityCommands(JavaPlugin plugin,
+                           ProfileManager profiles,
                            ModifierRegistry registry,
                            ModifierService modifiers,
                            Messages messages,
                            AuditLog audit,
                            ConfirmationTracker confirmations,
                            SuggestionProvider<CommandSourceStack> playerNames) {
+        this.plugin = Objects.requireNonNull(plugin);
         this.profiles = Objects.requireNonNull(profiles);
         this.registry = Objects.requireNonNull(registry);
         this.modifiers = Objects.requireNonNull(modifiers);
@@ -192,6 +198,9 @@ public final class AbilityCommands {
                 + " -> " + ability.id() + " (tier 1)", GOOD));
         Player online = Bukkit.getPlayer(profile.id());
         if (online != null) {
+            // Handed the focus with the ability. Granting a power somebody cannot use until
+            // they work out they need an item would be a poor way to receive a gift.
+            giveFocus(online, ability);
             messages.send(online, "ability.granted",
                     Messages.placeholder("ability", messages.get(ability.nameKey())),
                     Messages.placeholder("description",
@@ -264,6 +273,19 @@ public final class AbilityCommands {
     }
 
     // --------------------------------------------------------------------------- helpers
+
+    /**
+     * Puts the ability's focus in their hands, or at their feet if they are full.
+     *
+     * <p>Only for the Priest so far because it is the only ability written; the material is
+     * chosen per ability, so the next one picks its own.
+     */
+    private void giveFocus(Player player, Ability ability) {
+        ItemStack focus = AbilityFocus.create(plugin, messages, ability.id(),
+                org.bukkit.Material.STICK);
+        player.getInventory().addItem(focus).values().forEach(leftover ->
+                player.getWorld().dropItem(player.getLocation(), leftover));
+    }
 
     private void persist(PlayerProfile profile) {
         profiles.saveNow(profile);

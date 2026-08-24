@@ -27,6 +27,12 @@ public final class ProfileModifierIds {
         addIfPresent(ids, profile.curseId());
         ids.addAll(profile.markIds());
         addIfPresent(ids, profile.abilityId());
+
+        // Injuries live in their own list because they carry an expiry, but they are still
+        // modifiers and still have to be attached. Leaving them out of here is exactly how
+        // wounds ended up purely cosmetic - visible on the HUD and in /profile, applying no
+        // penalty and never ticking, because nothing ever looked them up.
+        profile.injuries().forEach(injury -> addIfPresent(ids, injury.id()));
         return ids;
     }
 

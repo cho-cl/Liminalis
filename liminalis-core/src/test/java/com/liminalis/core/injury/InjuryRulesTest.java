@@ -21,10 +21,10 @@ class InjuryRulesTest {
     private static final double MAX_HEALTH = 20.0;
 
     /** Injury above 25% of max health at 40%; mortal above 60% at 35%. */
-    private static final InjurySettings SETTINGS = new InjurySettings(0.25, 0.40, 0.60, 0.35, 1.0);
+    private static final InjurySettings SETTINGS = new InjurySettings(0.25, 0.40, 0.60, 0.35, 1, 10.0);
 
     /** Chances forced to certainty, so threshold behaviour can be tested on its own. */
-    private static final InjurySettings ALWAYS = new InjurySettings(0.25, 1.0, 0.60, 1.0, 1.0);
+    private static final InjurySettings ALWAYS = new InjurySettings(0.25, 1.0, 0.60, 1.0, 1, 10.0);
 
     private static DamageDescriptor blow(double damage) {
         return new DamageDescriptor(DamageCategory.SLASHING, damage, MAX_HEALTH);
@@ -82,7 +82,7 @@ class InjuryRulesTest {
     void aMassiveBlowThatDoesNotMaimStillCountsAsALargeOne() {
         // Otherwise the most violent hits in the game would be the least likely to leave a
         // mark, because failing the mortal roll would mean nothing happened at all.
-        InjurySettings mortalNeverInjuryAlways = new InjurySettings(0.25, 1.0, 0.60, 0.0, 1.0);
+        InjurySettings mortalNeverInjuryAlways = new InjurySettings(0.25, 1.0, 0.60, 0.0, 1, 10.0);
 
         assertThat(InjuryRules.classify(blow(15.0), mortalNeverInjuryAlways, new Random(1)))
                 .isEqualTo(InjurySeverity.INJURY);
@@ -90,7 +90,7 @@ class InjuryRulesTest {
 
     @Test
     void zeroChanceMeansNothingEverHappens() {
-        InjurySettings never = new InjurySettings(0.25, 0.0, 0.60, 0.0, 1.0);
+        InjurySettings never = new InjurySettings(0.25, 0.0, 0.60, 0.0, 1, 10.0);
 
         assertThat(rateOf(InjurySeverity.NONE, blow(18.0), never)).isEqualTo(1.0);
     }

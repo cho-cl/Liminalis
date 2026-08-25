@@ -16,6 +16,7 @@ import com.liminalis.plugin.modifier.ModifierType;
 import com.liminalis.plugin.modifier.capability.MortalWard;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
+import org.bukkit.Particle;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
@@ -24,6 +25,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,11 +33,15 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Inflicts wounds, lets them fade, and wipes them when a player respawns.
@@ -58,6 +64,9 @@ public final class InjuryService implements Listener {
     private final Messages messages;
     private final Debug debug;
     private final Random random = new Random();
+
+    /** Seconds each player has spent under Regeneration since their last mended wound. */
+    private final Map<UUID, Double> regenerating = new ConcurrentHashMap<>();
 
     private BukkitTask decayTask;
 
@@ -107,6 +116,12 @@ public final class InjuryService implements Listener {
         PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
         if (profile == null || profile.inLimbo()) {
             // Nothing can hurt you in Limbo, so nothing can wound you there either.
+            return;
+        }
+
+        if (WoundDamage.isWoundTick(player)) {
+            // Damage from a wound they already have. Judging it would let bleeding inflict
+            // bleeding, which is a loop that only ends when the player does.
             return;
         }
 
@@ -204,56 +219,143 @@ public final class InjuryService implements Listener {
         return matches;
     }
 
-    // ----------------------------------------------------------------------------- decay
+    // ------------------------------------------------------------------- decay and mending
 
     /**
-     * Retires wounds whose time is up.
+     * Retires wounds whose time is up, and mends one for anyone sitting under Regeneration.
      *
-     * <p>A Regeneration effect makes time pass faster for the wounded: each sweep pulls the
-     * expiry closer by an extra interval. That is what "faster with regen potions" means
-     * mechanically, and it gives the potion a second purpose beyond the health it restores.
+     * <p>Regeneration used to quietly pull every wound's expiry closer, which was invisible:
+     * nothing happened at any particular moment, wounds simply went away sooner than the
+     * player had any way to notice. It mends them outright now, one at a time, and says so
+     * when it does - so drinking the potion is an action with a result rather than a change
+     * to a number nobody can see.
      */
     private void sweepExpired() {
         long now = System.currentTimeMillis();
-        long acceleration = (long) (DECAY_INTERVAL_TICKS * 50L
-                * config.get().injuries().regenerationSpeedup());
+        double cureSeconds = config.get().injuries().regenerationCureSeconds();
+        double sweepSeconds = DECAY_INTERVAL_TICKS / 20.0;
 
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
             if (profile == null || profile.injuries().isEmpty()) {
+                regenerating.remove(player.getUniqueId());
                 continue;
             }
 
-            boolean healing = player.hasPotionEffect(PotionEffectType.REGENERATION);
             List<ActiveInjury> expired = new ArrayList<>();
-
             for (ActiveInjury injury : profile.injuries()) {
-                if (injury.permanent()) {
-                    continue;
+                if (!injury.permanent() && injury.hasExpired(now)) {
+                    expired.add(injury);
                 }
-                ActiveInjury current = injury;
-                if (healing && acceleration > 0) {
-                    current = new ActiveInjury(injury.id(), injury.expiresAt() - acceleration);
-                    profile.addInjury(current);
-                }
-                if (current.hasExpired(now)) {
-                    expired.add(current);
+            }
+            if (!expired.isEmpty()) {
+                expired.forEach(injury -> profile.removeInjury(injury.id()));
+                persistAndReapply(player, profile);
+                for (ActiveInjury injury : expired) {
+                    announceHealed(player, injury.id(), "injuries.healed");
                 }
             }
 
-            if (expired.isEmpty()) {
-                continue;
-            }
-            expired.forEach(injury -> profile.removeInjury(injury.id()));
-            profiles.saveNow(profile);
-            modifiers.applyFromProfile(player);
-
-            for (ActiveInjury injury : expired) {
-                registry.find(injury.id()).ifPresent(modifier ->
-                        messages.send(player, "injuries.healed", Messages.placeholder(
-                                "injury", messages.get(modifier.nameKey()))));
-            }
+            tickRegeneration(player, profile, cureSeconds, sweepSeconds);
         }
+    }
+
+    /** Counts up the time a player has spent regenerating, and mends a wound per interval. */
+    private void tickRegeneration(Player player, PlayerProfile profile,
+                                  double cureSeconds, double sweepSeconds) {
+        UUID id = player.getUniqueId();
+        if (cureSeconds <= 0 || !player.hasPotionEffect(PotionEffectType.REGENERATION)) {
+            // Reset rather than pause: a player who drinks a second potion later should not
+            // get an instant cure out of seconds banked half an hour ago.
+            regenerating.remove(id);
+            return;
+        }
+
+        double elapsed = regenerating.merge(id, sweepSeconds, Double::sum);
+        if (elapsed < cureSeconds) {
+            return;
+        }
+        regenerating.put(id, elapsed - cureSeconds);
+        mend(player, profile, 1, "injuries.mended-by-regeneration");
+    }
+
+    // ---------------------------------------------------------------------------- mending
+
+    /**
+     * A potion of Healing mends a wound as well as the health.
+     *
+     * <p>{@code MAGIC} is the reason vanilla gives for instant health specifically, so this
+     * catches the potion whether it was drunk, thrown or fired, and catches nothing else -
+     * eating, natural regeneration and the Regeneration effect all report differently.
+     *
+     * <p>Strength is deliberately ignored - Healing II mends exactly as many wounds as
+     * Healing I, and simply restores more health. It could have been read from the effect,
+     * except that an instantaneous effect is applied and discarded without ever joining the
+     * player's active effects, so the lookup would have returned nothing and quietly answered
+     * "tier one" forever. Inferring the tier back out of the healed amount is the other
+     * option and is worse: it guesses, and it would start guessing wrong the moment anything
+     * else touched healing, which on this server two curses already do.
+     *
+     * <p>{@code ignoreCancelled} is deliberate and has one consequence worth stating: a
+     * Bloodhungry player, whose curse refuses every source of healing there is, gets nothing
+     * out of the potion at all. That is the curse working rather than this failing.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onInstantHealth(EntityRegainHealthEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || event.getRegainReason() != EntityRegainHealthEvent.RegainReason.MAGIC) {
+            return;
+        }
+        PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
+        if (profile == null || profile.injuries().isEmpty()) {
+            return;
+        }
+        mend(player, profile, config.get().injuries().instantHealthCures(),
+                "injuries.mended-by-potion");
+    }
+
+    /**
+     * Mends up to {@code count} ordinary wounds, worst first.
+     *
+     * <p>Worst first - the one with the longest left to run - so a potion is spent on the
+     * thing that was actually bothering them rather than on a wound about to fade anyway.
+     *
+     * <p>Mortal wounds are never touched. Nothing you can drink regrows an arm; that still
+     * costs a life, or a Priest at the top of their tier.
+     */
+    private void mend(Player player, PlayerProfile profile, int count, String messageKey) {
+        if (count <= 0) {
+            return;
+        }
+        List<ActiveInjury> mendable = new ArrayList<>(profile.injuries().stream()
+                .filter(injury -> !injury.permanent())
+                .toList());
+        if (mendable.isEmpty()) {
+            return;
+        }
+        mendable.sort(Comparator.comparingLong(ActiveInjury::expiresAt).reversed());
+
+        List<ActiveInjury> mended =
+                List.copyOf(mendable.subList(0, Math.min(count, mendable.size())));
+        mended.forEach(injury -> profile.removeInjury(injury.id()));
+        persistAndReapply(player, profile);
+
+        for (ActiveInjury injury : mended) {
+            announceHealed(player, injury.id(), messageKey);
+        }
+        player.getWorld().spawnParticle(Particle.HEART,
+                player.getLocation().add(0, 1.2, 0), mended.size() + 2, 0.4, 0.4, 0.4, 0.0);
+        debug.log(() -> player.getName() + " mended " + mended.size() + " wound(s)");
+    }
+
+    private void persistAndReapply(Player player, PlayerProfile profile) {
+        profiles.saveNow(profile);
+        modifiers.applyFromProfile(player);
+    }
+
+    private void announceHealed(Player player, String injuryId, String messageKey) {
+        registry.find(injuryId).ifPresent(modifier -> messages.send(player, messageKey,
+                Messages.placeholder("injury", messages.get(modifier.nameKey()))));
     }
 
     // --------------------------------------------------------------------------- respawn

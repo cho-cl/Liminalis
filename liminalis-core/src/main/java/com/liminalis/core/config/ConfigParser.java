@@ -149,8 +149,10 @@ public final class ConfigParser {
                 reader.fraction("injuries.injury-chance", defaults.injuryChance()),
                 mortalThreshold,
                 reader.fraction("injuries.mortal-chance", defaults.mortalChance()),
-                reader.multiplier("injuries.regeneration-speedup",
-                        defaults.regenerationSpeedup()));
+                reader.wholeNumber("injuries.instant-health-cures",
+                        defaults.instantHealthCures(), 0, 16),
+                reader.decimalRange("injuries.regeneration-cure-seconds",
+                        defaults.regenerationCureSeconds(), 0.0, 3600.0));
     }
 
     /**

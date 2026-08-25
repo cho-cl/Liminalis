@@ -134,9 +134,12 @@ traits:
     marked.spawn-weight: 4.0
 
     # Injuries. duration-seconds is how long each takes to fade on its own.
+    # Bleeding deals REAL damage every two seconds - it flashes, it makes a sound, and it
+    # bypasses armour, because the wound is already inside the armour. It will never be the
+    # thing that kills you: the damage stops dead at stops-at-health.
     bleeding.duration-seconds: 180
-    bleeding.damage-per-tick: 0.5
-    bleeding.stops-at-health: 1.0
+    bleeding.damage-per-tick: 1.0
+    bleeding.stops-at-health: 4.0
     sprained_ankle.duration-seconds: 300
     sprained_ankle.speed-penalty: 0.20
     burns.duration-seconds: 300
@@ -252,14 +255,25 @@ injuries:
   # Mortal wounds are the opposite. They are permanent until a life is spent, so they stay
   # pinned to blows that took more than half of everything you had in a single hit. The gap
   # between the two thresholds is the design - hurt often, maimed almost never.
-  injury-threshold: 0.12
-  injury-chance: 0.70
+  injury-threshold: 0.15
+  injury-chance: 0.55
   mortal-threshold: 0.60
   mortal-chance: 0.30
 
-  # How much faster wounds fade under a Regeneration effect, as a multiple of normal time.
-  # 1.0 means a regenerating player heals at double speed. Mortal wounds never fade at all.
-  regeneration-speedup: 1.0
+  # What mends a wound early.
+  #
+  # instant-health-cures is how many ordinary wounds a potion of Healing closes. Worst first:
+  # the wound with the longest left to run, so the potion is spent on the one that was
+  # actually bothering them. Healing II mends the same number and just restores more health.
+  #
+  # regeneration-cure-seconds is how long a player must be under a Regeneration effect per
+  # wound mended. A normal Regeneration potion runs 45 seconds, so it works through four.
+  # Set to 0 to turn it off.
+  #
+  # NEITHER touches a mortal wound. Nothing you can drink regrows an arm - that still costs
+  # a life, or a Priest at the top of their tier.
+  instant-health-cures: 1
+  regeneration-cure-seconds: 10.0
 
 boons:
   # A blessing is a straight upside. A curse is a larger upside paid for with a real

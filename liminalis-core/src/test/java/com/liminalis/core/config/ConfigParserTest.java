@@ -390,14 +390,16 @@ class ConfigParserTest {
         values.put("injuries.injury-chance", 0.5);
         values.put("injuries.mortal-threshold", 0.7);
         values.put("injuries.mortal-chance", 0.2);
-        values.put("injuries.regeneration-speedup", 2.0);
+        values.put("injuries.instant-health-cures", 2);
+        values.put("injuries.regeneration-cure-seconds", 4.0);
 
         ConfigResult result = ConfigParser.parse(values);
 
         assertThat(result.valid()).isTrue();
         assertThat(result.config().injuries().injuryThreshold()).isEqualTo(0.3);
         assertThat(result.config().injuries().mortalChance()).isEqualTo(0.2);
-        assertThat(result.config().injuries().regenerationSpeedup()).isEqualTo(2.0);
+        assertThat(result.config().injuries().instantHealthCures()).isEqualTo(2);
+        assertThat(result.config().injuries().regenerationCureSeconds()).isEqualTo(4.0);
     }
 
     @Test

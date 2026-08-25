@@ -11,8 +11,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>{@link InjuryRulesTest} proves the rule is correct against settings it makes up.
  * This proves the settings we <em>ship</em> produce the game we said we wanted, which is a
- * different question and the one that was actually wrong: the old numbers were arithmetically
- * fine and meant that a player in decent armour was essentially never wounded by anything.
+ * different question and the one that keeps being wrong. The first numbers were
+ * arithmetically fine and meant a player in decent armour was essentially never wounded; the
+ * second overcorrected and had a zombie punch wounding you seven times in ten.
  *
  * <p>Each case is a real hit with the damage a player would really take from it, so a change
  * to the defaults fails with the name of the blow that changed rather than a bare number.
@@ -23,34 +24,37 @@ class InjuryTuningTest {
     private static final double NORMAL_HEALTH = 20.0;
     private static final int ITERATIONS = 200_000;
 
-    // ------------------------------------------------------------------ wounds are common
+    // ------------------------------------------------------- a real fight leaves marks
 
     @Test
-    void aSolidMobHitOnAnUnarmouredPlayerUsuallyWounds() {
-        // A zombie or a skeleton's arrow: 3 damage of the 20 you have.
-        assertThat(woundRate(3.0)).isGreaterThan(0.60);
+    void aSolidMobHitOnAnUnarmouredPlayerOftenWounds() {
+        // A zombie, or a skeleton's arrow: 3 damage of the 20 you have.
+        assertThat(woundRate(3.0)).isGreaterThan(0.50);
     }
 
     @Test
     void aShortFallWounds() {
-        // Six blocks: 3 damage. You should limp away from this more often than not.
-        assertThat(woundRate(3.0)).isGreaterThan(0.60);
+        // Six blocks, 3 damage. You should limp away from this more often than not.
+        assertThat(woundRate(3.0)).isGreaterThan(0.50);
     }
 
     @Test
     void aCreeperAtRangeWounds() {
-        assertThat(woundRate(9.0)).isGreaterThan(0.65);
+        assertThat(woundRate(9.0)).isGreaterThan(0.50);
     }
+
+    // --------------------------------------------------------------- armour is worth it
 
     @Test
-    void aRealFightInIronArmourStillLeavesMarks() {
-        // Full iron takes roughly 60% off, so a 7-damage swing lands as under 3. The old
-        // tuning needed 5 through armour to wound at all, which is why armoured players
-        // reported that injuries "just never happen".
-        assertThat(woundRate(2.8)).isGreaterThan(0.60);
+    void armourRaisesTheBarWithoutRemovingIt() {
+        // Full iron takes roughly 60% off. A 7-damage swing lands as under 3 and leaves
+        // nothing; a 10-damage swing through the same armour still gets through. That gap is
+        // the point of judging severity AFTER armour - protection buys you the small hits.
+        assertThat(woundRate(2.8)).isZero();
+        assertThat(woundRate(4.0)).isGreaterThan(0.50);
     }
 
-    // --------------------------------------------------------------- scratches still are
+    // -------------------------------------------------------- scratches leave nothing
 
     @Test
     void aScratchLeavesNothing() {
@@ -59,20 +63,22 @@ class InjuryTuningTest {
     }
 
     @Test
-    void aTickOfFireCannotWound() {
-        // Important beyond flavour: fire ticks every second, so if this could wound, standing
-        // in a campfire would roll the injury table twenty times.
+    void damageOverTimeCanNeverWound() {
+        // Fire, poison and wither all tick for 1 to 2 at a time, once a second. If any of
+        // them could wound, standing in a campfire would roll the injury table twenty times.
         assertThat(woundRate(1.0)).isZero();
         assertThat(woundRate(2.0)).isZero();
     }
 
     @Test
-    void poisonAndWitherCannotWound() {
-        // Both tick for 1 at a time. Damage over time must never be a wound engine.
+    void bleedingCannotWoundTheBleeder() {
+        // Bleeding deals real damage now, which means it fires a real damage event. The
+        // service guards that path directly; this checks the numbers agree, so the guard is
+        // a second lock rather than the only one.
         assertThat(woundRate(1.0)).isZero();
     }
 
-    // ------------------------------------------------------------- maiming stays reserved
+    // ------------------------------------------------------- maiming stays reserved
 
     @Test
     void nothingSurvivableFromAnOrdinaryMobCanMaim() {
@@ -91,28 +97,43 @@ class InjuryTuningTest {
 
     @Test
     void maimingIsTheMinorityOutcomeEvenOfAHugeBlow() {
-        // A blow past the mortal line is far more likely to leave an ordinary wound than to
-        // take a limb. Being maimed should be a story, not a Tuesday.
+        // A blow past the mortal line is far likelier to leave an ordinary wound than to take
+        // a limb. Being maimed should be a story, not a Tuesday.
         assertThat(mortalRate(14.0)).isLessThan(woundRate(14.0));
     }
 
     @Test
-    void theTwoThresholdsAreFarApart() {
+    void theTwoThresholdsStayFarApart() {
         // The gap is the design: hurt often, maimed almost never. If these ever converge,
         // every wounding blow starts costing limbs.
-        assertThat(SHIPPED.mortalThreshold()).isGreaterThan(SHIPPED.injuryThreshold() * 4);
+        assertThat(SHIPPED.mortalThreshold()).isGreaterThan(SHIPPED.injuryThreshold() * 3);
     }
 
-    // ------------------------------------------------------------------ extra hearts stay fair
+    // ------------------------------------------------- extra hearts stay proportionate
 
     @Test
     void extraHeartsDoNotMakeYouEasierToWoundInProportion() {
         // A Hollow player with 26 health takes a 3-damage hit. In absolute terms it is the
         // same blow; in proportion it is smaller, and it should wound less often.
-        double normal = rate(InjurySeverity.INJURY, 3.0, NORMAL_HEALTH);
-        double hollow = rate(InjurySeverity.INJURY, 3.0, 26.0);
+        assertThat(rate(InjurySeverity.INJURY, 3.0, 26.0))
+                .isLessThan(rate(InjurySeverity.INJURY, 3.0, NORMAL_HEALTH));
+    }
 
-        assertThat(hollow).isLessThan(normal);
+    // -------------------------------------------------------------- mending is real
+
+    @Test
+    void aPotionOfHealingMendsSomething() {
+        // Zero here would mean the potion restores health and leaves every wound in place,
+        // which is the behaviour players were told had changed.
+        assertThat(SHIPPED.instantHealthCures()).isPositive();
+    }
+
+    @Test
+    void aRegenerationPotionWorksThroughSeveralWounds() {
+        // A normal Regeneration potion runs 45 seconds. If one wound cost longer than that,
+        // the effect would mend nothing at all in practice and only look like it did.
+        assertThat(SHIPPED.regenerationCureSeconds()).isPositive();
+        assertThat(SHIPPED.regenerationCureSeconds()).isLessThan(45.0 / 2);
     }
 
     // ------------------------------------------------------------------------- helpers

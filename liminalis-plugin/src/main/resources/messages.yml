@@ -193,6 +193,8 @@ injuries:
   taken: "<prefix><red><injury></red><newline><dark_gray>  <description></dark_gray>"
   mortal: "<prefix><dark_red><bold><injury></bold></dark_red><newline><dark_gray>  <description></dark_gray>"
   healed: "<prefix><gray>Your <white><injury></white> has healed.</gray>"
+  mended-by-potion: "<prefix><green>The potion closes your <white><injury></white>.</green>"
+  mended-by-regeneration: "<prefix><green>Your <white><injury></white> knits shut.</green>"
   cleared-by-death: "<gray><italic>A new body. Whatever was wrong with the old one is not your problem now.</italic></gray>"
   ward-held: "<prefix><gold>That should have cost you something you could not get back.</gold>"
 

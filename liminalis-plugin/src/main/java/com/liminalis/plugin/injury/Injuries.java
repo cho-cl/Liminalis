@@ -267,6 +267,11 @@ public final class Injuries {
      * <p>It does not weaken you, it drains you, and it will not kill you on its own - the
      * damage stops at the last half-heart. A wound that could finish someone who had already
      * escaped a fight would make ordinary injuries as decisive as mortal ones.
+     *
+     * <p>The damage goes through {@link WoundDamage} rather than {@code setHealth}, so it
+     * flashes, makes a sound and plays the hurt animation the way poison does. Silently
+     * subtracting health was the reason players said bleeding did nothing: there was no
+     * moment to notice, only a smaller number later on.
      */
     public static final class Bleeding implements Injury, Ticking {
 
@@ -309,12 +314,11 @@ public final class Injuries {
             }
             sinceLastTick.put(player.getUniqueId(), 0);
 
-            double drain = tuning.get("bleeding.damage-per-tick", 0.5);
-            double floor = tuning.get("bleeding.stops-at-health", 1.0);
-            if (player.getHealth() - drain <= floor) {
+            double drain = tuning.get("bleeding.damage-per-tick", 1.0);
+            double floor = tuning.get("bleeding.stops-at-health", 4.0);
+            if (!WoundDamage.inflict(player, drain, floor)) {
                 return;
             }
-            player.setHealth(Math.max(floor, player.getHealth() - drain));
             player.getWorld().spawnParticle(Particle.DUST,
                     player.getLocation().add(0, 1.0, 0), 4, 0.2, 0.4, 0.2,
                     new org.bukkit.Particle.DustOptions(org.bukkit.Color.fromRGB(140, 20, 20), 1.0f));

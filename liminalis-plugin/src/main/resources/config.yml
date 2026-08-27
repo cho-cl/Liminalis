@@ -191,6 +191,20 @@ traits:
     priest.consecrate-cooldown: 60
     priest.close-wound-cooldown: 300
 
+    # What the Priest looks like.
+    #
+    # smite-max-pillars caps how many pillars of light are drawn no matter how many undead
+    # were caught. A priest who smites a horde would otherwise draw several thousand
+    # particles in one frame and stutter every client watching; the first few carry the idea.
+    priest.smite-max-pillars: 8
+    #
+    # The ambient glow a priest gives off while their staff is in hand - a halo that grows
+    # with their tier, so other players can tell a priest who can close a mortal wound from
+    # one who cannot just by looking. Set ambient-effects to 0 to turn it off entirely, or
+    # raise ambient-interval to make it rarer (it counts half-seconds between motes).
+    priest.ambient-effects: 1.0
+    priest.ambient-interval: 4
+
     # What opens each tier. Healing opens 2 and 3, felling undead opens 4 and 5,
     # so nobody reaches the top by only ever doing the half they find easier.
     priest.tier2-healing: 120

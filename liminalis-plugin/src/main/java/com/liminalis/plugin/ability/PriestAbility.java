@@ -10,6 +10,8 @@ import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.text.Messages;
 import com.liminalis.plugin.trait.TraitTuning;
+import com.liminalis.plugin.modifier.capability.Ticking;
+import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -20,12 +22,16 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The Priest - the reference implementation, and the Creator's own.
@@ -42,7 +48,7 @@ import java.util.Optional;
  * <p>Nothing here touches a player as a target of harm. Abilities are for surviving and for
  * each other, and the one that heals should be the clearest example of that.
  */
-public final class PriestAbility implements Ability {
+public final class PriestAbility implements Ability, Ticking {
 
     public static final String ID = "priest";
 
@@ -50,17 +56,26 @@ public final class PriestAbility implements Ability {
     public static final String HEALED = "priest.healed";
     public static final String UNDEAD_FELLED = "priest.undead_felled";
 
+    private final JavaPlugin plugin;
     private final TraitTuning tuning;
     private final ProfileManager profiles;
     private final ModifierRegistry registry;
     private final ModifierService modifiers;
     private final Messages messages;
 
-    public PriestAbility(TraitTuning tuning,
+    /** Consecrations still burning, so the shared loop can keep drawing them. */
+    private final Map<UUID, Consecration> consecrations = new ConcurrentHashMap<>();
+
+    /** Shared-loop intervals since each priest last gave off a mote. */
+    private final Map<UUID, Integer> ambientCounters = new ConcurrentHashMap<>();
+
+    public PriestAbility(JavaPlugin plugin,
+                         TraitTuning tuning,
                          ProfileManager profiles,
                          ModifierRegistry registry,
                          ModifierService modifiers,
                          Messages messages) {
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.tuning = Objects.requireNonNull(tuning, "tuning");
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.registry = Objects.requireNonNull(registry, "registry");
@@ -91,6 +106,25 @@ public final class PriestAbility implements Ability {
                         (int) tuning.get("priest.tier4-undead", 60)),
                 new TierRequirement(5, UNDEAD_FELLED,
                         (int) tuning.get("priest.tier5-undead", 150)));
+    }
+
+    /**
+     * Drives everything the Priest shows that is not a single moment.
+     *
+     * <p>Through the shared modifier loop, like every other ticking thing in the plugin. An
+     * ability that scheduled its own repeating task for a glow would be the first one to do
+     * it, and the tenth ability written by copying this one would make ten of them.
+     */
+    @Override
+    public void tick(Player priest) {
+        sustainConsecration(priest);
+        ambient(priest);
+    }
+
+    @Override
+    public void onDetach(Player priest) {
+        consecrations.remove(priest.getUniqueId());
+        ambientCounters.remove(priest.getUniqueId());
     }
 
     @Override
@@ -142,7 +176,7 @@ public final class PriestAbility implements Ability {
             }
 
             award(priest, HEALED, healed);
-            bless(target, Particle.HEART, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.4f);
+            layHandsEffect(priest, target);
 
             messages.send(priest, "ability.priest.healed",
                     Messages.placeholder("player", target.getName()));
@@ -190,7 +224,7 @@ public final class PriestAbility implements Ability {
                 messages.send(priest, "ability.priest.self-whole");
                 return false;
             }
-            bless(priest, Particle.END_ROD, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.1f);
+            mendSelfEffect(priest);
             messages.send(priest, "ability.priest.mended");
             return true;
         }
@@ -243,11 +277,8 @@ public final class PriestAbility implements Ability {
                 // Dealt as damage from the priest, so kills credit their counter and any
                 // other system that cares who did it sees the right answer.
                 victim.damage(damage, priest);
-                victim.getWorld().spawnParticle(Particle.END_ROD,
-                        victim.getLocation().add(0, 1.0, 0), 18, 0.3, 0.6, 0.3, 0.02);
             }
-            priest.getWorld().playSound(priest.getLocation(),
-                    Sound.ITEM_TRIDENT_THUNDER, 0.7f, 1.6f);
+            smiteEffect(priest, range, struck);
 
             messages.send(priest, "ability.priest.smote",
                     Messages.placeholder("count", struck.size()));
@@ -298,15 +329,15 @@ public final class PriestAbility implements Ability {
                         PotionEffectType.REGENERATION, ticks, 0, true, true));
                 person.addPotionEffect(new PotionEffect(
                         PotionEffectType.RESISTANCE, ticks, 0, true, true));
+                HolyEffects.halo(person, 12, Particle.DUST, HolyEffects.GOLD);
                 person.getWorld().spawnParticle(Particle.END_ROD,
-                        person.getLocation().add(0, 1.2, 0), 20, 0.4, 0.7, 0.4, 0.01);
+                        person.getLocation().add(0, 1.2, 0), 12, 0.4, 0.7, 0.4, 0.01);
                 if (!person.equals(priest)) {
                     messages.send(person, "ability.priest.consecrated-by",
                             Messages.placeholder("player", priest.getName()));
                 }
             }
-            priest.getWorld().playSound(priest.getLocation(),
-                    Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.3f);
+            consecrateEffect(priest, range, ticks);
 
             messages.send(priest, "ability.priest.consecrated",
                     Messages.placeholder("count", blessed.size()));
@@ -366,9 +397,7 @@ public final class PriestAbility implements Ability {
             profiles.saveNow(theirs);
             modifiers.applyFromProfile(target);
 
-            target.getWorld().spawnParticle(Particle.END_ROD,
-                    target.getLocation().add(0, 1.2, 0), 60, 0.5, 0.9, 0.5, 0.03);
-            target.playSound(target.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 1.0f, 1.2f);
+            closeWoundEffect(priest, target);
 
             messages.send(priest, "ability.priest.treated",
                     Messages.placeholder("player", target.getName()));
@@ -434,10 +463,190 @@ public final class PriestAbility implements Ability {
                 .orElse(null);
     }
 
-    private void bless(Player who, Particle particle, Sound sound, float pitch) {
-        who.getWorld().spawnParticle(particle, who.getLocation().add(0, 1.6, 0),
-                8, 0.35, 0.4, 0.35, 0.0);
-        who.playSound(who.getLocation(), sound, 1.0f, pitch);
+    // --------------------------------------------------------------------- holy effects
+
+    /**
+     * A priest reaching somebody, and that person coming back up.
+     *
+     * <p>The beam is the whole point of this one: healing at a distance used to look
+     * identical whether you did it or somebody else did, because all anyone saw was particles
+     * appearing on the person who got better. Drawing the line makes it obvious across a
+     * field who is keeping who alive - which on a server built around cooperating is the
+     * single most useful thing a visual effect here can do.
+     */
+    private void layHandsEffect(Player priest, Player target) {
+        HolyEffects.beam(priest.getEyeLocation(), target.getLocation().add(0, 1.2, 0),
+                24, Particle.END_ROD, null);
+        HolyEffects.spiral(target.getLocation(), 2.2, 0.6, 28, 2.0,
+                Particle.DUST, HolyEffects.GOLD);
+        HolyEffects.halo(target, 14, Particle.END_ROD, null);
+        target.getWorld().spawnParticle(Particle.HEART,
+                target.getLocation().add(0, 1.4, 0), 6, 0.3, 0.4, 0.3, 0.0);
+
+        HolyEffects.chord(target.getLocation(), 1.0f,
+                new Sound[] {Sound.BLOCK_AMETHYST_BLOCK_CHIME, Sound.BLOCK_NOTE_BLOCK_BELL},
+                new float[] {1.4f, 1.7f});
+    }
+
+    /**
+     * Quieter than everything else on purpose.
+     *
+     * <p>Mending yourself is the power a priest uses when nobody came, so it gets a column and
+     * a halo and no chord - it should read as somebody keeping themselves upright rather than
+     * as an event anyone else is meant to notice.
+     */
+    private void mendSelfEffect(Player priest) {
+        HolyEffects.pillar(priest.getLocation(), 2.6, 16, Particle.END_ROD, null);
+        HolyEffects.spiral(priest.getLocation(), 2.0, 0.45, 18, 1.5,
+                Particle.DUST, HolyEffects.PALE);
+        HolyEffects.halo(priest, 10, Particle.DUST, HolyEffects.GOLD);
+
+        priest.playSound(priest.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, 1.1f);
+    }
+
+    /**
+     * Light falling on everything that should not be standing there.
+     *
+     * <p>The ring is drawn at the real radius, so the boundary of the power is a thing players
+     * can see rather than infer. The pillars come down rather than up - the only shape in the
+     * ability that does, because it is the only power that is not a kindness.
+     */
+    private void smiteEffect(Player priest, double range, List<LivingEntity> struck) {
+        HolyEffects.shockwave(priest.getLocation(), range, 3,
+                Particle.DUST, HolyEffects.AMBER);
+        priest.getWorld().spawnParticle(Particle.FLASH, priest.getLocation().add(0, 1, 0), 1);
+
+        // Capped rather than per-victim without limit: a priest who catches a horde would
+        // otherwise draw several thousand particles in one frame and stutter every client
+        // watching. The first few pillars carry the idea; the rest is noise.
+        int shown = Math.min(struck.size(), (int) tuning.get("priest.smite-max-pillars", 8));
+        for (LivingEntity victim : struck.subList(0, shown)) {
+            Location at = victim.getLocation();
+            HolyEffects.pillar(at, 5.0, 16, Particle.END_ROD, null);
+            HolyEffects.ring(at, 0.8, 10, Particle.DUST, HolyEffects.GOLD);
+            victim.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
+                    at.add(0, 1.0, 0), 10, 0.3, 0.5, 0.3, 0.05);
+        }
+
+        HolyEffects.chord(priest.getLocation(), 0.8f,
+                new Sound[] {Sound.ITEM_TRIDENT_THUNDER, Sound.BLOCK_BELL_USE},
+                new float[] {1.6f, 1.9f});
+    }
+
+    /**
+     * Ground marked out as somewhere safe, for as long as it lasts.
+     *
+     * <p>Draws the dome once at full strength and then hands the place to
+     * {@link #sustainConsecration}, which keeps a quieter version of it alive for the whole
+     * duration. A protection that flashed once and then looked exactly like open ground for
+     * the next twelve seconds was the effect players could not tell was still running.
+     */
+    private void consecrateEffect(Player priest, double range, int ticks) {
+        Location centre = priest.getLocation();
+        HolyEffects.dome(centre, range, 4, Particle.DUST, HolyEffects.PALE);
+        HolyEffects.ring(centre, range, (int) (range * 6), Particle.END_ROD, null);
+        HolyEffects.pillar(centre, 4.0, 20, Particle.DUST, HolyEffects.GOLD);
+        centre.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING,
+                centre.clone().add(0, 1.2, 0), 40, 0.6, 0.8, 0.6, 0.3);
+
+        consecrations.put(priest.getUniqueId(),
+                new Consecration(centre.clone(), System.currentTimeMillis() + ticks * 50L));
+
+        HolyEffects.chord(centre, 0.9f,
+                new Sound[] {Sound.BLOCK_BEACON_ACTIVATE, Sound.BLOCK_CONDUIT_ACTIVATE},
+                new float[] {1.3f, 1.1f});
+    }
+
+    /**
+     * The largest thing the ability does, and now the largest thing it looks like.
+     *
+     * <p>Closing a mortal wound is rarer than anything else on the server and used to draw
+     * the same puff of particles as a three-heart top-up. A six-block pillar, three rings and
+     * a double helix is not excess - it is the only signal anybody watching gets that
+     * something happened here that nothing else in the world can do.
+     */
+    private void closeWoundEffect(Player priest, Player target) {
+        Location at = target.getLocation();
+
+        HolyEffects.pillar(at, 6.0, 40, Particle.END_ROD, null);
+        HolyEffects.shockwave(at, 3.0, 3, Particle.DUST, HolyEffects.GOLD);
+        HolyEffects.doubleSpiral(at, 3.0, 0.8, 30, 3.0, Particle.DUST, HolyEffects.PALE);
+        HolyEffects.halo(target, 20, Particle.DUST, HolyEffects.AMBER);
+        at.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING,
+                at.clone().add(0, 1.2, 0), 60, 0.5, 0.9, 0.5, 0.4);
+        at.getWorld().spawnParticle(Particle.FLASH, at.clone().add(0, 1.2, 0), 1);
+
+        HolyEffects.beam(priest.getEyeLocation(), at.clone().add(0, 1.2, 0),
+                20, Particle.WAX_ON, null);
+
+        HolyEffects.chord(at, 1.0f,
+                new Sound[] {Sound.BLOCK_BEACON_POWER_SELECT, Sound.ITEM_TOTEM_USE,
+                             Sound.BLOCK_BELL_RESONATE},
+                new float[] {1.2f, 1.0f, 1.4f});
+    }
+
+    // ------------------------------------------------------------------ sustained effects
+
+    /**
+     * Keeps a consecration visible for as long as it is protecting anybody.
+     *
+     * <p>Driven from the shared modifier loop rather than a task of its own, because no
+     * modifier in this plugin owns a timer - which also means it stops if the priest logs out.
+     * That is the honest outcome: the blessing on everyone else was already handed over as a
+     * potion effect and keeps running, and the light was only ever a description of where the
+     * priest was standing when they called it.
+     */
+    private void sustainConsecration(Player priest) {
+        Consecration active = consecrations.get(priest.getUniqueId());
+        if (active == null) {
+            return;
+        }
+        if (System.currentTimeMillis() >= active.expiresAt()) {
+            consecrations.remove(priest.getUniqueId());
+            active.centre().getWorld().playSound(
+                    active.centre(), Sound.BLOCK_BEACON_DEACTIVATE, 0.5f, 1.4f);
+            return;
+        }
+        double range = tuning.get("priest.consecrate-range", 10.0);
+        HolyEffects.ring(active.centre(), range, (int) (range * 4),
+                Particle.DUST, HolyEffects.PALE);
+        active.centre().getWorld().spawnParticle(Particle.END_ROD,
+                active.centre().clone().add(0, 0.4, 0), 3, range / 3, 0.2, range / 3, 0.0);
+    }
+
+    /**
+     * The quiet glow a priest carries while their staff is in hand.
+     *
+     * <p>This is the effect that is on almost all the time, so it is the one most able to
+     * become irritating - a handful of motes every two seconds, and nothing at all when the
+     * staff is put away. The halo grows with their tier, which makes progress something other
+     * players can see rather than something buried in {@code /profile}: you can tell a priest
+     * who can close a mortal wound from one who cannot by looking at them.
+     */
+    private void ambient(Player priest) {
+        if (tuning.get("priest.ambient-effects", 1.0) <= 0
+                || !AbilityFocus.held(plugin, priest, ID)) {
+            ambientCounters.remove(priest.getUniqueId());
+            return;
+        }
+        int waited = ambientCounters.merge(priest.getUniqueId(), 1, Integer::sum);
+        int every = (int) tuning.get("priest.ambient-interval", 4);
+        if (waited < Math.max(1, every)) {
+            return;
+        }
+        ambientCounters.put(priest.getUniqueId(), 0);
+
+        int tier = profiles.resident(priest.getUniqueId())
+                .map(PlayerProfile::abilityTier)
+                .orElse(1);
+
+        HolyEffects.halo(priest, 4 + tier * 2, Particle.DUST, HolyEffects.GOLD);
+        priest.getWorld().spawnParticle(Particle.END_ROD,
+                priest.getLocation().add(0, 1.1, 0), 1 + tier / 2, 0.35, 0.5, 0.35, 0.005);
+    }
+
+    /** Where a consecration was called, and when its light should go out. */
+    private record Consecration(Location centre, long expiresAt) {
     }
 
     private void award(Player priest, String counter, int amount) {

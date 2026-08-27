@@ -219,7 +219,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         Blessings.all(tuning).forEach(registry::register);
         Curses.all(tuning).forEach(registry::register);
         Injuries.all(tuning).forEach(registry::register);
-        registry.register(new PriestAbility(tuning, profiles, registry, modifiers, messages));
+        registry.register(new PriestAbility(this, tuning, profiles, registry, modifiers, messages));
         registry.register(new MarkOfReturn(tuning, limbo));
     }
 

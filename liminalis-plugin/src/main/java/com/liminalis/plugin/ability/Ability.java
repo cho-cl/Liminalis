@@ -43,9 +43,15 @@ public interface Ability extends Modifier {
         return ModifierType.ABILITY;
     }
 
-    /** How high this ability goes, which is simply how many powers it has. */
+    /**
+     * How high this ability goes.
+     *
+     * <p>The highest level any of its powers waits for, rather than how many powers it has -
+     * an ability with a power that starts unlocked has one more power than it has levels,
+     * and counting them would advertise a level nothing is behind.
+     */
     default int maxLevel() {
-        return Math.max(1, powers().size());
+        return powers().stream().mapToInt(Power::unlockedAt).max().orElse(1);
     }
 
     /** messages.yml key describing what a given level grants. */

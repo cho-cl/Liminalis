@@ -59,7 +59,7 @@ public final class AbilityCommand {
         return Commands.literal("ability")
                 .requires(source -> source.getSender() instanceof Player)
                 .executes(this::listPowers)
-                .then(Commands.argument("slot", IntegerArgumentType.integer(1, 5))
+                .then(Commands.argument("slot", IntegerArgumentType.integer(1, 9))
                         .executes(context -> use(context, null))
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .suggests(this::suggestNearby)
@@ -89,10 +89,10 @@ public final class AbilityCommand {
 
         int tier = profiles.resident(user.getUniqueId())
                 .map(PlayerProfile::abilityTier).orElse(1);
-        if (tier < power.slot()) {
+        if (tier < power.unlockedAt()) {
             messages.send(user, "ability.locked",
                     Messages.placeholder("slot", slot),
-                    Messages.placeholder("tier", power.slot()));
+                    Messages.placeholder("tier", power.unlockedAt()));
             return Command.SINGLE_SUCCESS;
         }
 
@@ -161,7 +161,7 @@ public final class AbilityCommand {
                         + ability.maxLevel(), LABEL)));
 
         for (Power power : ability.powers()) {
-            boolean open = tier >= power.slot();
+            boolean open = tier >= power.unlockedAt();
             Component line = Component.text("  " + power.slot() + "  ", open ? LABEL : LOCKED)
                     .append(messages.get("ability." + ability.id() + "." + power.id() + ".name")
                             .color(open ? VALUE : LOCKED));
@@ -189,7 +189,8 @@ public final class AbilityCommand {
         if (toNext > 0) {
             user.sendMessage(messages.get("ability.how-to-level"));
         }
-        user.sendMessage(Component.text("  /ability <1-5> [player]", LOCKED));
+        user.sendMessage(Component.text("  /ability <1-" + ability.powers().size()
+                + "> [player]", LOCKED));
         return Command.SINGLE_SUCCESS;
     }
 

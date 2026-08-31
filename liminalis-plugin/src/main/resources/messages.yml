@@ -346,6 +346,61 @@ ability:
     level4: "Consecrate"
     level5: "Close the Wound"
 
+  drones:
+    name: "<yellow>Drones</yellow>"
+    description: "Bees that work for you. One more of them every level, and each level teaches the swarm something new."
+    level1: "Summon - and the temperament toggle"
+    level2: "Attack"
+    level3: "Bring"
+    level4: "Mine and place"
+    level5: "Control"
+
+    summon:
+      name: "Summon"
+      description: "Calls out one drone. Used again with all of them out, it sends the whole swarm away."
+    attack:
+      name: "Attack"
+      description: "Point at something and every drone goes for it."
+    bring:
+      name: "Bring"
+      description: "Point at anything and a drone hauls it back to you."
+    work:
+      name: "Mine / Place"
+      description: "Sends one drone to the block you are looking at. It breaks it - or, if it is carrying a block, puts one there. Right-click a drone with something to load it."
+    control:
+      name: "Control"
+      description: "Look through a drone and fly. Two usable slots, chests still open, digging is slow. Used again it moves to the next drone, and lets go after the last."
+    temperament:
+      name: "Temperament"
+      description: "Cycles what your drones are willing to do: passive, defensive, hostiles, everything."
+
+    mode:
+      passive: "<gray>passive</gray> - they will not fight at all"
+      defensive: "<green>defensive</green> - they answer anything that hits you"
+      hostiles: "<gold>hostiles</gold> - they pick fights with mobs, never with people"
+      everything: "<red>everything</red> - they will sting other players"
+
+    summoned: "<prefix><yellow>A drone unfolds itself.</yellow> <gray><count> of <total></gray>"
+    dismissed: "<prefix><gray>The swarm folds away. <white><count></white> gone.</gray>"
+    none-out: "<gray>You have no drones out. /ability 1</gray>"
+    nothing-there: "<gray>Nothing in front of you to send them at.</gray>"
+    no-block: "<gray>No block in range.</gray>"
+    all-busy: "<gray>Every drone is already working.</gray>"
+    not-people: "<gray>Your drones are set not to touch other players. /ability 6</gray>"
+    attacking: "<prefix><red>The swarm turns on <white><target></white>.</red>"
+    bringing: "<prefix><yellow>A drone goes to fetch <white><target></white>.</yellow>"
+    mining: "<gray>A drone goes to break the <white><block></white>.</gray>"
+    placing: "<gray>A drone goes to set its block down.</gray>"
+    now-holding: "<gray>It takes the item and holds it above itself.</gray>"
+    took-back: "<gray>You take it back off the drone.</gray>"
+    empty-handed: "<gray>It is not carrying anything.</gray>"
+    lost: "<prefix><red>A drone stops.</red>"
+    piloting: "<prefix><yellow>You are looking through drone <white><drone></white> of <white><total></white>.</yellow><newline><gray>  Two slots. Digging is slow. /ability 5 again to move on.</gray>"
+    released: "<prefix><gray>You are yourself again.</gray>"
+    too-far: "<prefix><gray>Too far from your body. The connection goes.</gray>"
+    two-slots: "<gray>Only two slots while you are flying one.</gray>"
+    not-in-this-mode: "<gray>Not from this game mode.</gray>"
+
     lay_hands:
       name: "Lay Hands"
       description: "<dark_gray>Heal someone and close their lesser injuries.</dark_gray>"

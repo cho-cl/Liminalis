@@ -5,6 +5,8 @@ import com.liminalis.core.profile.JsonProfileStore;
 import com.liminalis.core.profile.ProfileBackup;
 import com.liminalis.core.profile.ProfileStore;
 import com.liminalis.plugin.ability.AbilityService;
+import com.liminalis.plugin.ability.DronesAbility;
+import com.liminalis.plugin.ability.drones.DroneService;
 import com.liminalis.plugin.ability.PriestAbility;
 import com.liminalis.plugin.boon.Blessings;
 import com.liminalis.plugin.boon.Curses;
@@ -76,6 +78,7 @@ public final class LiminalisPlugin extends JavaPlugin {
     private GhostVisitService ghosts;
     private InjuryService injuries;
     private SingularityService singularity;
+    private DroneService droneService;
     private RescueService rescue;
     private AbilityService abilities;
     private PlayerHud hud;
@@ -121,6 +124,9 @@ public final class LiminalisPlugin extends JavaPlugin {
         ghosts = new GhostVisitService(this, config, profiles, limbo, messages, debug);
 
         singularity = new SingularityService(this, config, profiles, limboWorld, registry, modifiers, messages, debug);
+        droneService = new DroneService(this,
+                new TraitTuning(() -> config.get().traits().tuning()),
+                profiles, messages, debug);
         registerModifiers();
         injuries = new InjuryService(this, config, profiles, registry, modifiers, messages, debug);
         rescue = new RescueService(this, config, profiles, limbo, limboWorld, registry, messages, debug);
@@ -143,12 +149,15 @@ public final class LiminalisPlugin extends JavaPlugin {
                 this, config, profiles, registry, modifiers, messages, debug), this);
         getServer().getPluginManager().registerEvents(injuries, this);
         getServer().getPluginManager().registerEvents(singularity, this);
+        getServer().getPluginManager().registerEvents(droneService, this);
+        getServer().getPluginManager().registerEvents(droneService.control(), this);
         getServer().getPluginManager().registerEvents(rescue, this);
         getServer().getPluginManager().registerEvents(abilities, this);
         getServer().getPluginManager().registerEvents(offhand, this);
         modifiers.start();
         injuries.start();
         singularity.start();
+        droneService.start();
         rescue.start();
         hud.start();
         offhand.start();
@@ -183,6 +192,7 @@ public final class LiminalisPlugin extends JavaPlugin {
             rescue.stop();
         }
         if (singularity != null) {
+            droneService.stop();
             singularity.stop();
         }
         if (injuries != null) {
@@ -214,6 +224,7 @@ public final class LiminalisPlugin extends JavaPlugin {
         Curses.all(tuning).forEach(registry::register);
         Injuries.all(tuning).forEach(registry::register);
         registry.register(new PriestAbility(this, tuning, profiles, registry, modifiers, messages));
+        registry.register(new DronesAbility(tuning, droneService, messages));
         registry.register(new MarkOfReturn(tuning, limbo));
     }
 

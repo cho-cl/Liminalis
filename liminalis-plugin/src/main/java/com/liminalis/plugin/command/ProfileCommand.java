@@ -3,6 +3,7 @@ package com.liminalis.plugin.command;
 import com.liminalis.core.ability.AbilityLevels;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.ability.Ability;
+import com.liminalis.plugin.ability.Power;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.modifier.Modifier;
 import com.liminalis.plugin.modifier.ModifierRegistry;
@@ -114,6 +115,38 @@ public final class ProfileCommand {
                 .append(Component.text(toNext > 0
                         ? uses + " uses, " + toNext + " more for the next power"
                         : uses + " uses, every power is yours", VALUE)));
+
+        explainPowers(player, ability, profile.abilityTier());
+    }
+
+    /**
+     * What each power actually does, and which of them are yours yet.
+     *
+     * <p>An ability is commissioned for one player from a message they sent, and until now the
+     * only place it was ever explained back to them was {@code /ability} - which they have to
+     * know to type. The profile screen is where somebody looks to find out what they are, so
+     * the answer to "what can I do" belongs on it, in full, including the parts still locked:
+     * seeing what is coming is most of what makes the next level worth reaching.
+     */
+    private void explainPowers(Player player, Ability ability, int level) {
+        player.sendMessage(Component.text("      ", FAINT)
+                .append(messages.get(ability.descriptionKey())));
+
+        for (Power power : ability.powers()) {
+            boolean open = level >= power.unlockedAt();
+            String key = "ability." + ability.id() + "." + power.id();
+
+            Component heading = Component.text("      " + power.slot() + "  ",
+                            open ? LABEL : FAINT)
+                    .append(messages.get(key + ".name").color(open ? VALUE : FAINT));
+            if (!open) {
+                heading = heading.append(Component.text(
+                        "   opens at level " + power.unlockedAt(), FAINT));
+            }
+            player.sendMessage(heading);
+            player.sendMessage(Component.text("         ", FAINT)
+                    .append(messages.get(key + ".description")));
+        }
     }
 
     private void describe(Player player, String label, Set<String> ids) {

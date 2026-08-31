@@ -307,21 +307,21 @@ rescue:
 # ---------------------------------------------------------------------------------------
 # Abilities
 #
-# Each one needs ability.<id>.name and .description, plus a .tier<n> line per tier saying
-# what that tier granted. Written for the player who asked for it - they will read this
+# Each one needs ability.<id>.name and .description, plus a .level<n> line per level saying
+# what that level granted. Written for the player who asked for it - they will read this
 # line the moment they earn it, and it is the payoff for however long they worked.
 # ---------------------------------------------------------------------------------------
 
 ability:
   granted: "<prefix><gradient:#c9d6e3:#8f7fbf><ability></gradient><newline><dark_gray>  <description></dark_gray><newline><gray>  Use it with </gray><white>/ability</white>"
-  tier-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  <tier>: <granted></white><newline><gray>  /ability <tier></gray>"
+  level-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  <level>: <granted></white><newline><gray>  /ability <level></gray>"
   fed: "<gray>The residue goes into it and does not come back. <white>+<amount></white></gray>"
   none-to-feed: "<gray>You have no ability for it to go into.</gray>"
   already-complete: "<gray>There is nothing left of it to open.</gray>"
 
   none: "<gray>You have no ability. The Creator hands those out by request.</gray>"
   no-such-power: "<gray>Your ability has nothing in slot <white><slot></white>.</gray>"
-  locked: "<gray>Slot <white><slot></white> opens at tier <white><tier></white>. Not yet.</gray>"
+  locked: "<gray>Slot <white><slot></white> opens at level <white><tier></white>. Not yet.</gray>"
   cooling: "<gray>Not yet. <white><seconds>s</white>.</gray>"
   failed: "<red>Something went wrong. It has been logged.</red>"
   no-target: "<gray>Look at someone first, or name them: </gray><white>/ability <slot> <player></white>"
@@ -337,11 +337,11 @@ ability:
     focus:
       name: "<gradient:#c9d6e3:#8f7fbf>Healing Staff</gradient>"
       lore: "<dark_gray>Worn smooth where a hand has always been.</dark_gray>"
-    tier1: "Lay Hands"
-    tier2: "Mend Self"
-    tier3: "Holy Smite"
-    tier4: "Consecrate"
-    tier5: "Close the Wound"
+    level1: "Lay Hands"
+    level2: "Mend Self"
+    level3: "Holy Smite"
+    level4: "Consecrate"
+    level5: "Close the Wound"
 
     lay_hands:
       name: "Lay Hands"

@@ -384,6 +384,51 @@ class ConfigParserTest {
     // ---------------------------------------------------------------- injuries section
 
     @Test
+    void readsTheAbilityLadder() {
+        Map<String, Object> values = valid();
+        values.put("abilities.uses-for-level-2", 10);
+        values.put("abilities.uses-for-level-3", 20);
+        values.put("abilities.uses-for-level-4", 30);
+        values.put("abilities.uses-for-level-5", 40);
+        values.put("abilities.uses-per-residue", 5);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isTrue();
+        assertThat(result.config().abilities().usesPerLevel())
+                .containsExactly(10, 20, 30, 40);
+        assertThat(result.config().abilities().usesPerResidue()).isEqualTo(5);
+    }
+
+    @Test
+    void refusesALadderThatDoesNotAscend() {
+        // A later level opening before an earlier one breaks the only promise the system
+        // makes: that level N means powers one through N. Better to refuse to start.
+        Map<String, Object> values = valid();
+        values.put("abilities.uses-for-level-2", 100);
+        values.put("abilities.uses-for-level-3", 50);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.errors()).anyMatch(error ->
+                error.contains("uses-for-level-3") && error.contains("more than"));
+    }
+
+    @Test
+    void refusesTwoLevelsThatOpenAtTheSameCount() {
+        // Equal is as broken as backwards - two powers would arrive on the same use, and one
+        // of the levels would be a number nobody ever sits at.
+        Map<String, Object> values = valid();
+        values.put("abilities.uses-for-level-2", 25);
+        values.put("abilities.uses-for-level-3", 25);
+
+        ConfigResult result = ConfigParser.parse(values);
+
+        assertThat(result.valid()).isFalse();
+    }
+
+    @Test
     void readsTheInjurySection() {
         Map<String, Object> values = valid();
         values.put("injuries.injury-threshold", 0.3);

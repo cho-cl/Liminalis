@@ -10,17 +10,11 @@ import com.liminalis.plugin.boon.Blessings;
 import com.liminalis.plugin.boon.Curses;
 import com.liminalis.plugin.combat.CombatListener;
 import com.liminalis.plugin.command.AbilityCommand;
-import com.liminalis.plugin.command.AbilityCommands;
+import com.liminalis.plugin.command.AdminCommand;
 import com.liminalis.plugin.command.AuditLog;
-import com.liminalis.plugin.command.InjuryCommands;
 import com.liminalis.plugin.command.ItemsMenu;
-import com.liminalis.plugin.command.SingularityCommands;
-import com.liminalis.plugin.command.BoonCommands;
 import com.liminalis.plugin.command.LimboPlayerCommand;
-import com.liminalis.plugin.command.LiminalisCommand;
-import com.liminalis.plugin.command.LivesAndLimboCommands;
 import com.liminalis.plugin.command.ProfileCommand;
-import com.liminalis.plugin.command.TraitCommands;
 import com.liminalis.plugin.config.ConfigService;
 import com.liminalis.plugin.injury.Injuries;
 import com.liminalis.plugin.injury.OffhandBlocker;
@@ -228,32 +222,20 @@ public final class LiminalisPlugin extends JavaPlugin {
         ConfirmationTracker confirmations =
                 new ConfirmationTracker(CONFIRMATION_WINDOW_MILLIS, System::currentTimeMillis);
 
-        LiminalisCommand command = new LiminalisCommand(
-                config, messages, profiles, modifiers, audit, confirmations, debug,
-                this::runBackup);
-        LivesAndLimboCommands livesAndLimbo = new LivesAndLimboCommands(
-                config, profiles, limbo, audit, confirmations, command.knownPlayers());
+        ItemsMenu itemsMenu = new ItemsMenu(this, messages);
+        getServer().getPluginManager().registerEvents(itemsMenu, this);
+
+        AdminCommand admin = new AdminCommand(this, config, messages, profiles, registry,
+                modifiers, abilities, limbo, limboWorld, singularity, itemsMenu, audit,
+                confirmations, debug, this::runBackup);
         LimboPlayerCommand limboCommand =
                 new LimboPlayerCommand(profiles, limbo, ghosts, rescue, modifiers, messages);
         ProfileCommand profileCommand =
                 new ProfileCommand(config, profiles, registry, messages);
-        TraitCommands traitCommands = new TraitCommands(config, profiles, registry, modifiers,
-                messages, audit, confirmations, command.knownPlayers());
-        BoonCommands boonCommands = new BoonCommands(profiles, registry, modifiers,
-                messages, audit, confirmations, command.knownPlayers());
-        InjuryCommands injuryCommands = new InjuryCommands(profiles, registry, modifiers,
-                injuries, messages, audit, command.knownPlayers());
-        SingularityCommands singularityCommands = new SingularityCommands(this, singularity,
-                messages, audit, command.knownPlayers());
-        AbilityCommands abilityCommands = new AbilityCommands(this, profiles, registry, modifiers,
-                messages, audit, confirmations, command.knownPlayers());
-        ItemsMenu itemsMenu = new ItemsMenu(this, messages);
-        getServer().getPluginManager().registerEvents(itemsMenu, this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             event.registrar().register(
-                    command.build(livesAndLimbo, traitCommands, boonCommands, injuryCommands,
-                            singularityCommands, abilityCommands, itemsMenu),
+                    admin.build(),
                     "Liminalis administration",
                     List.of("lim"));
             event.registrar().register(

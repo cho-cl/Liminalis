@@ -1,6 +1,6 @@
 package com.liminalis.plugin.command;
 
-import com.liminalis.core.ability.AbilityProgression;
+import com.liminalis.core.ability.AbilityLevels;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.ability.Ability;
 import com.liminalis.plugin.config.ConfigService;
@@ -98,15 +98,22 @@ public final class ProfileCommand {
         if (!(modifier instanceof Ability ability)) {
             return;
         }
-        player.sendMessage(Component.text("      tier ", FAINT)
-                .append(Component.text(profile.abilityTier() + " / " + ability.maxTier(), VALUE)));
+        // One number, one sentence. This used to have to name which of an ability's private
+        // counters was being measured, because each one invented its own - so the line read
+        // "212 / 300 priest.healed" and only made sense to somebody who knew the ability.
+        int uses = profile.abilityProgress().getOrDefault(AbilityLevels.USES, 0);
+        java.util.List<Integer> configured = config.get().abilities().usesPerLevel();
+        java.util.List<Integer> ladder = configured.subList(0,
+                Math.min(configured.size(), Math.max(0, ability.maxLevel() - 1)));
+        int toNext = AbilityLevels.usesToNext(uses, ladder);
 
-        AbilityProgression.nextRequirement(ability.tiers(), profile.abilityProgress())
-                .ifPresent(next -> player.sendMessage(Component.text("      next: ", FAINT)
-                        .append(Component.text(
-                                profile.abilityProgress().getOrDefault(next.counterKey(), 0)
-                                        + " / " + next.required() + " "
-                                        + next.counterKey(), VALUE))));
+        player.sendMessage(Component.text("      level ", FAINT)
+                .append(Component.text(
+                        profile.abilityTier() + " / " + ability.maxLevel(), VALUE)));
+        player.sendMessage(Component.text("      ", FAINT)
+                .append(Component.text(toNext > 0
+                        ? uses + " uses, " + toNext + " more for the next power"
+                        : uses + " uses, every power is yours", VALUE)));
     }
 
     private void describe(Player player, String label, Set<String> ids) {

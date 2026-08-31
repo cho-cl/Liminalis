@@ -12,24 +12,16 @@ permissions:
     description: Access to the /liminalis administration tree.
     default: op
     children:
-      liminalis.admin.reload: true
-      liminalis.admin.profile: true
       liminalis.admin.debug: true
       liminalis.admin.data: true
       liminalis.admin.lives: true
       liminalis.admin.limbo: true
       liminalis.admin.trait: true
-      liminalis.admin.boon: true
+      liminalis.admin.blessing: true
+      liminalis.admin.curse: true
+      liminalis.admin.mark: true
       liminalis.admin.injury: true
-      liminalis.admin.singularity: true
       liminalis.admin.ability: true
-      liminalis.admin.items: true
-  liminalis.admin.reload:
-    description: Reload config.yml and messages.yml.
-    default: op
-  liminalis.admin.profile:
-    description: View any player's Liminalis profile.
-    default: op
   liminalis.admin.debug:
     description: Toggle verbose logging.
     default: op
@@ -45,18 +37,18 @@ permissions:
   liminalis.admin.trait:
     description: List, inspect, grant, remove and reroll player traits.
     default: op
-  liminalis.admin.boon:
-    description: List, inspect, set and clear player blessings and curses.
+  liminalis.admin.blessing:
+    description: Hand out and take back blessings.
+    default: op
+  liminalis.admin.curse:
+    description: Hand out and take back curses.
+    default: op
+  liminalis.admin.mark:
+    description: Hand out and take back marks.
     default: op
   liminalis.admin.injury:
     description: List, inspect, inflict and heal injuries and mortal wounds.
     default: op
-  liminalis.admin.singularity:
-    description: Force waves, spawn creatures, and hand out books and residue.
-    default: op
   liminalis.admin.ability:
     description: Grant, take, inspect and tier player abilities. Works on offline players.
-    default: op
-  liminalis.admin.items:
-    description: Open the menu of plugin items - residue, threshold stones, lore books.
     default: op

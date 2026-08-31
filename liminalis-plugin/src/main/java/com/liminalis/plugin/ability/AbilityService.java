@@ -1,7 +1,6 @@
 package com.liminalis.plugin.ability;
 
-import com.liminalis.core.ability.AbilityProgression;
-import com.liminalis.core.ability.TierRequirement;
+import com.liminalis.core.ability.AbilityLevels;
 import com.liminalis.core.profile.PlayerProfile;
 import com.liminalis.plugin.Debug;
 import com.liminalis.plugin.config.ConfigService;
@@ -26,6 +25,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -74,19 +74,6 @@ public final class AbilityService implements Listener {
 
     // ---------------------------------------------------------------------------- using
 
-    /** Credits a kill toward whatever the killer's ability counts. */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onKill(EntityDeathEvent event) {
-        Player killer = event.getEntity().getKiller();
-        if (killer == null) {
-            return;
-        }
-        Entity victim = event.getEntity();
-        abilityOf(killer, PriestAbility.class)
-                .ifPresent(priest -> priest.recordFelled(killer, victim));
-        checkForTierUp(killer);
-    }
-
     // ---------------------------------------------------------------------------- firing
 
     /**
@@ -130,8 +117,75 @@ public final class AbilityService implements Listener {
                             + power.cooldownSeconds() * 1000L);
         }
         if (fired) {
-            checkForTierUp(user);
+            // Only a power that did something counts. A smite with nothing to smite is not
+            // progress, or the fastest way to level would be firing into an empty field.
+            recordUse(user, 1);
         }
+    }
+
+    /**
+     * Adds to the one counter and opens whatever that earns.
+     *
+     * <p>The level is recomputed from the counter rather than incremented, so a level that
+     * drifted - through an admin edit, or a rebalanced ladder in config - corrects itself the
+     * next time anything happens. One source of truth, and it is the count.
+     */
+    public void recordUse(Player player, int uses) {
+        PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
+        Optional<Ability> ability = abilityOf(player);
+        if (profile == null || ability.isEmpty()) {
+            return;
+        }
+        if (uses > 0) {
+            profile.addAbilityProgress(AbilityLevels.USES, uses);
+        }
+
+        List<Integer> ladder = ladderFor(ability.get());
+        int earned = AbilityLevels.levelFor(
+                profile.abilityProgress().getOrDefault(AbilityLevels.USES, 0), ladder);
+        int before = profile.abilityTier();
+        profiles.saveNow(profile);
+
+        if (earned == before) {
+            return;
+        }
+        profile.setAbilityTier(earned);
+        profiles.saveNow(profile);
+        modifiers.applyFromProfile(player);
+
+        if (earned > before) {
+            messages.send(player, "ability.level-gained",
+                    Messages.placeholder("level", earned),
+                    Messages.placeholder("granted",
+                            (net.kyori.adventure.text.Component)
+                                    messages.get(ability.get().levelKey(earned))));
+        }
+        debug.log(() -> player.getName() + " ability level " + before + " -> " + earned);
+    }
+
+    /**
+     * The ladder this ability climbs, cut to the number of powers it actually has.
+     *
+     * <p>Every ability shares the same rungs, but an ability with three powers has no use for
+     * the fourth and fifth - and letting somebody reach a level with nothing behind it would
+     * announce a power that does not exist.
+     */
+    public List<Integer> ladderFor(Ability ability) {
+        List<Integer> configured = config.get().abilities().usesPerLevel();
+        int rungs = Math.min(configured.size(), Math.max(0, ability.maxLevel() - 1));
+        return configured.subList(0, rungs);
+    }
+
+    /** Uses still needed for the next power, or 0 at the top. */
+    public int usesToNextLevel(Player player) {
+        PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
+        Optional<Ability> ability = abilityOf(player);
+        if (profile == null || ability.isEmpty()) {
+            return 0;
+        }
+        return AbilityLevels.usesToNext(
+                profile.abilityProgress().getOrDefault(AbilityLevels.USES, 0),
+                ladderFor(ability.get()));
     }
 
     /** Seconds left on a power, or 0 if it is ready. */
@@ -174,66 +228,21 @@ public final class AbilityService implements Listener {
         }
         event.setCancelled(true);
 
-        PlayerProfile profile = profiles.of(player);
         Optional<Ability> ability = abilityOf(player);
         if (ability.isEmpty()) {
             messages.send(player, "ability.none-to-feed");
             return;
         }
-
-        Optional<TierRequirement> next = AbilityProgression.nextRequirement(
-                ability.get().tiers(), profile.abilityProgress());
-        if (next.isEmpty()) {
+        if (usesToNextLevel(player) <= 0) {
             messages.send(player, "ability.already-complete");
             return;
         }
 
-        int perShard = (int) config.get().abilities().progressPerResidue();
-        int gained = AbilityProgression.progressFromResidue(1, perShard);
+        int gained = config.get().abilities().usesPerResidue();
         held.subtract();
-        profile.addAbilityProgress(next.get().counterKey(), gained);
-        profiles.saveNow(profile);
+        recordUse(player, gained);
 
-        messages.send(player, "ability.fed",
-                Messages.placeholder("amount", gained));
-        checkForTierUp(player);
-    }
-
-    // ---------------------------------------------------------------------------- tiers
-
-    /**
-     * Recomputes a player's tier and announces any gain.
-     *
-     * <p>Cheap enough to call after anything that could have moved a counter. Reads the tier
-     * from the counters rather than trusting the stored value, so a stored tier that drifted
-     * - through an admin edit, or a rebalanced threshold in config - corrects itself.
-     */
-    public void checkForTierUp(Player player) {
-        PlayerProfile profile = profiles.resident(player.getUniqueId()).orElse(null);
-        Optional<Ability> ability = abilityOf(player);
-        if (profile == null || ability.isEmpty()) {
-            return;
-        }
-
-        int earned = AbilityProgression.unlockedTier(
-                ability.get().tiers(), profile.abilityProgress());
-        if (earned == profile.abilityTier()) {
-            return;
-        }
-
-        int before = profile.abilityTier();
-        profile.setAbilityTier(earned);
-        profiles.saveNow(profile);
-        modifiers.applyFromProfile(player);
-
-        if (earned > before) {
-            messages.send(player, "ability.tier-gained",
-                    Messages.placeholder("tier", earned),
-                    Messages.placeholder("granted",
-                            (net.kyori.adventure.text.Component)
-                                    messages.get(ability.get().tierKey(earned))));
-        }
-        debug.log(() -> player.getName() + " ability tier " + before + " -> " + earned);
+        messages.send(player, "ability.fed", Messages.placeholder("amount", gained));
     }
 
     // -------------------------------------------------------------------------- lookup

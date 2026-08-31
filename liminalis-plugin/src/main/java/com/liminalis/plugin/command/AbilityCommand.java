@@ -157,8 +157,8 @@ public final class AbilityCommand {
 
         user.sendMessage(Component.empty());
         user.sendMessage(messages.get(ability.nameKey()).color(ACCENT)
-                .append(Component.text("   tier " + tier + " / "
-                        + ability.maxTier(), LABEL)));
+                .append(Component.text("   level " + tier + " / "
+                        + ability.maxLevel(), LABEL)));
 
         for (Power power : ability.powers()) {
             boolean open = tier >= power.slot();

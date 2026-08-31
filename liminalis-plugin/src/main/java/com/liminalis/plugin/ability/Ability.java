@@ -1,6 +1,5 @@
 package com.liminalis.plugin.ability;
 
-import com.liminalis.core.ability.TierRequirement;
 import com.liminalis.plugin.modifier.Modifier;
 import com.liminalis.plugin.modifier.ModifierType;
 
@@ -14,25 +13,20 @@ import java.util.List;
  * going to be implemented dozens of times over a season by someone working from a Discord
  * message, so it asks for as little as possible.
  *
- * <p>Tiers open through conditions the ability defines for itself. A generic ladder would be
- * cheaper and would feel arbitrary bolted onto a healer, so each ability counts the things it
- * is actually about and says how many of them are enough.
+ * <p><strong>Levelling is not one of the things it asks for.</strong> Abilities used to
+ * declare their own unlock conditions - the Priest counted healing and felled undead, and
+ * every ability after it would have invented two counters of its own. It was tailored, and
+ * the tailoring is what made it complicated to write, to explain and to answer questions
+ * about. Every ability now climbs the same ladder: you level by using it, and level N means
+ * powers one through N are yours. Writing an ability is now nothing but writing five powers.
  */
 public interface Ability extends Modifier {
 
     /**
-     * What opens each tier.
-     *
-     * <p>Tier 1 should cost nothing - being handed an ability you cannot use yet reads as a
-     * rejection rather than a gift.
-     */
-    List<TierRequirement> tiers();
-
-    /**
      * The five things this ability can do, in slot order.
      *
-     * <p>Slot number and tier are the same thing, so a player who knows they are tier 3 knows
-     * that /ability 1, 2 and 3 work without having to look anything up.
+     * <p>Slot number and level are the same thing, so a player who knows they are level 3
+     * knows that /ability 1, 2 and 3 work without having to look anything up.
      *
      * <p>Five is a deliberate floor as well as a ceiling. An ability with two powers is a
      * perk, and the point of these is that each one is somebody's whole character.
@@ -49,12 +43,13 @@ public interface Ability extends Modifier {
         return ModifierType.ABILITY;
     }
 
-    default int maxTier() {
-        return tiers().stream().mapToInt(TierRequirement::tier).max().orElse(1);
+    /** How high this ability goes, which is simply how many powers it has. */
+    default int maxLevel() {
+        return Math.max(1, powers().size());
     }
 
-    /** messages.yml key describing what a given tier grants. */
-    default String tierKey(int tier) {
-        return "ability." + id() + ".tier" + tier;
+    /** messages.yml key describing what a given level grants. */
+    default String levelKey(int level) {
+        return "ability." + id() + ".level" + level;
     }
 }

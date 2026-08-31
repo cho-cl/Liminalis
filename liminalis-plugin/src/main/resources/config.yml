@@ -213,12 +213,23 @@ traits:
     priest.tier5-undead: 150
 
 abilities:
-  # How much progress one shard of Singularity residue buys toward the next tier.
+  # One ladder, climbed by every ability there will ever be.
   #
-  # This is the rate that decides whether the accelerant is a genuine alternative route
-  # or merely a nudge. It exists so an ability gated behind something its owner rarely
-  # does cannot leave them staring at a tier they can read about and never reach.
-  progress-per-residue: 25
+  # You level by USING your ability, and level N means powers 1 through N are yours. That
+  # is the whole rule. A use only counts if the power actually did something - a smite with
+  # nothing to smite is not progress, or the fastest way to level would be firing into a
+  # field.
+  #
+  # These must ascend. The server refuses to start otherwise, because a ladder that goes
+  # backwards would open a later power before an earlier one.
+  uses-for-level-2: 25
+  uses-for-level-3: 75
+  uses-for-level-4: 150
+  uses-for-level-5: 300
+
+  # What one shard of Singularity residue is worth, for somebody whose ability rarely finds
+  # an occasion to be used. Sneak and right-click a shard to spend it.
+  uses-per-residue: 25
 
 rescue:
   # How long a living player may stay in the grey before it starts keeping things.

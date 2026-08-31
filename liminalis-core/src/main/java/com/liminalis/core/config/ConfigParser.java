@@ -47,9 +47,7 @@ public final class ConfigParser {
         BoonRollSettings boons = readBoons(reader);
         InjurySettings injuries = readInjuries(reader);
         SingularitySettings singularity = readSingularity(reader);
-        AbilitySettings abilities = new AbilitySettings(reader.wholeNumber(
-                "abilities.progress-per-residue",
-                AbilitySettings.DEFAULTS.progressPerResidue(), 1, 10_000));
+        AbilitySettings abilities = readAbilities(reader);
         RescueSettings rescue = new RescueSettings(reader.wholeNumber(
                 "rescue.crossing-seconds",
                 (int) RescueSettings.DEFAULTS.crossingSeconds(), 30, 3600));
@@ -153,6 +151,31 @@ public final class ConfigParser {
                         defaults.instantHealthCures(), 0, 16),
                 reader.decimalRange("injuries.regeneration-cure-seconds",
                         defaults.regenerationCureSeconds(), 0.0, 3600.0));
+    }
+
+    /**
+     * The one ladder every ability climbs.
+     *
+     * <p>The four numbers are checked against each other. A ladder that does not ascend would
+     * open a later level before an earlier one, which breaks the only promise the system
+     * makes - that level N means powers one through N.
+     */
+    private static AbilitySettings readAbilities(Reader reader) {
+        List<Integer> defaults = AbilitySettings.DEFAULTS.usesPerLevel();
+        List<Integer> ladder = new ArrayList<>();
+
+        for (int level = 2; level <= defaults.size() + 1; level++) {
+            String path = "abilities.uses-for-level-" + level;
+            int uses = reader.wholeNumber(path, defaults.get(level - 2), 1, 1_000_000);
+            if (!ladder.isEmpty() && uses <= ladder.get(ladder.size() - 1)) {
+                reader.errors.add(path + ": must be more than the level before it ("
+                        + ladder.get(ladder.size() - 1) + ") but was " + uses);
+            }
+            ladder.add(uses);
+        }
+
+        return new AbilitySettings(ladder, reader.wholeNumber("abilities.uses-per-residue",
+                AbilitySettings.DEFAULTS.usesPerResidue(), 1, 10_000));
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.liminalis.plugin.ability;
 
-import com.liminalis.core.ability.TierRequirement;
 import com.liminalis.core.injury.ActiveInjury;
 import com.liminalis.core.injury.InjurySeverity;
 import com.liminalis.core.profile.PlayerProfile;
@@ -47,14 +46,16 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Nothing here touches a player as a target of harm. Abilities are for surviving and for
  * each other, and the one that heals should be the clearest example of that.
+ *
+ * <p>It used to declare its own unlock conditions too - so many hearts healed for the first
+ * half, so many undead felled for the second. That is gone, along with the two counters it
+ * kept. Every ability climbs the same ladder now: use it, and the next power opens. What is
+ * left here is five powers and nothing else, which is exactly what the next ability written
+ * by copying this one should have to be.
  */
 public final class PriestAbility implements Ability, Ticking {
 
     public static final String ID = "priest";
-
-    /** Counters this ability advances on. Namespaced, as every ability's must be. */
-    public static final String HEALED = "priest.healed";
-    public static final String UNDEAD_FELLED = "priest.undead_felled";
 
     private final JavaPlugin plugin;
     private final TraitTuning tuning;
@@ -86,26 +87,6 @@ public final class PriestAbility implements Ability, Ticking {
     @Override
     public String id() {
         return ID;
-    }
-
-    /**
-     * Five tiers, five powers, and the counters deliberately alternate.
-     *
-     * <p>Healing opens the first half and felling the undead opens the second, so nobody
-     * reaches the top by only ever doing the half they find easier. The order also means the
-     * ability teaches itself: you learn to keep people alive before you are handed anything
-     * that kills.
-     */
-    @Override
-    public List<TierRequirement> tiers() {
-        return List.of(
-                new TierRequirement(1, HEALED, 0),
-                new TierRequirement(2, HEALED, (int) tuning.get("priest.tier2-healing", 120)),
-                new TierRequirement(3, HEALED, (int) tuning.get("priest.tier3-healing", 300)),
-                new TierRequirement(4, UNDEAD_FELLED,
-                        (int) tuning.get("priest.tier4-undead", 60)),
-                new TierRequirement(5, UNDEAD_FELLED,
-                        (int) tuning.get("priest.tier5-undead", 150)));
     }
 
     /**
@@ -175,7 +156,6 @@ public final class PriestAbility implements Ability, Ticking {
                 return false;
             }
 
-            award(priest, HEALED, healed);
             layHandsEffect(priest, target);
 
             messages.send(priest, "ability.priest.healed",
@@ -404,15 +384,6 @@ public final class PriestAbility implements Ability, Ticking {
             messages.send(target, "ability.priest.treated-by",
                     Messages.placeholder("player", priest.getName()));
             return true;
-        }
-    }
-
-    // ------------------------------------------------------------------------- progress
-
-    /** Credited when something this priest killed turns out to have been undead. */
-    public void recordFelled(Player priest, Entity victim) {
-        if (isUndead(victim)) {
-            award(priest, UNDEAD_FELLED, 1);
         }
     }
 
@@ -647,13 +618,6 @@ public final class PriestAbility implements Ability, Ticking {
 
     /** Where a consecration was called, and when its light should go out. */
     private record Consecration(Location centre, long expiresAt) {
-    }
-
-    private void award(Player priest, String counter, int amount) {
-        PlayerProfile profile = profiles.resident(priest.getUniqueId()).orElse(null);
-        if (profile != null && amount > 0) {
-            profile.addAbilityProgress(counter, amount);
-        }
     }
 
     private static boolean isUndead(Entity entity) {

@@ -76,7 +76,7 @@ public final class ItemsMenu implements Listener, InventoryHolder {
             contents.add(null);
         }
         for (LoreBooks.LoreBook book : LoreBooks.all()) {
-            add(book.toItem(), book.title(), "Lore. Drops from the Singularity.");
+            add(book.toItem(plugin), book.title(), "Lore. Drops from the Singularity.");
         }
 
         for (int slot = 0; slot < contents.size() && slot < SIZE; slot++) {

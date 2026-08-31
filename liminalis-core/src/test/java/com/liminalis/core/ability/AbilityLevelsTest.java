@@ -105,6 +105,49 @@ class AbilityLevelsTest {
         assertThat(AbilityLevels.usesForLevel(-4, LADDER)).isZero();
     }
 
+    // --------------------------------------------------- spending what the Singularity drops
+
+    @Test
+    void spendsOnlyWhatTheNextLevelNeeds() {
+        // 25 uses off the next level, a shard is worth 25, and the player is holding sixty.
+        // One shard. Burning the other fifty-nine is not generosity.
+        assertThat(AbilityLevels.shardsToSpend(25, 25, 60)).isEqualTo(1);
+        assertThat(AbilityLevels.shardsToSpend(50, 25, 60)).isEqualTo(2);
+    }
+
+    @Test
+    void roundsUpBecauseAPartialShardBuysNothing() {
+        assertThat(AbilityLevels.shardsToSpend(1, 25, 60)).isEqualTo(1);
+        assertThat(AbilityLevels.shardsToSpend(26, 25, 60)).isEqualTo(2);
+        assertThat(AbilityLevels.shardsToSpend(49, 25, 60)).isEqualTo(2);
+    }
+
+    @Test
+    void neverSpendsMoreThanIsHeld() {
+        assertThat(AbilityLevels.shardsToSpend(300, 25, 3)).isEqualTo(3);
+    }
+
+    @Test
+    void spendsNothingWhenThereIsNothingToBuy() {
+        assertThat(AbilityLevels.shardsToSpend(0, 25, 60)).isZero();
+        assertThat(AbilityLevels.shardsToSpend(-5, 25, 60)).isZero();
+        assertThat(AbilityLevels.shardsToSpend(50, 25, 0)).isZero();
+    }
+
+    @Test
+    void aWorthlessShardSpendsNothingRatherThanEverything() {
+        // Guards a config of 0: dividing by it would throw, and treating it as "spend the
+        // stack" would silently eat every shard the player had for no progress at all.
+        assertThat(AbilityLevels.shardsToSpend(50, 0, 60)).isZero();
+    }
+
+    @Test
+    void spendingNeverOvershootsTheTopOfTheLadder() {
+        // At 290 of 300 uses, ten short, one shard finishes it and the rest stay in the bag.
+        int toNext = AbilityLevels.usesToNext(290, LADDER);
+        assertThat(AbilityLevels.shardsToSpend(toNext, 25, 40)).isEqualTo(1);
+    }
+
     @Test
     void theCounterIsSharedRatherThanNamespaced() {
         // The old system namespaced a counter per ability. There is nothing to namespace

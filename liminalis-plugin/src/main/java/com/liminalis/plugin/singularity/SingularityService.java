@@ -330,7 +330,7 @@ public final class SingularityService implements Listener {
                 ? 1.0 : settings.bookDropChance();
         SingularityRules.rollBook(LoreBooks.asEntries(), bookChance, random)
                 .map(LoreBooks::byId)
-                .ifPresent(book -> event.getDrops().add(book.toItem()));
+                .ifPresent(book -> event.getDrops().add(book.toItem(plugin)));
 
         int residue = settings.minResidue()
                 + random.nextInt(Math.max(1, settings.maxResidue() - settings.minResidue() + 1));

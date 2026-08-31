@@ -179,6 +179,16 @@ public final class AbilityCommand {
                                 + ".description")));
             }
         }
+        // How to get the next one. A ladder nobody is told the rungs of is indistinguishable
+        // from no ladder - and the two Singularity drops that feed it were being kept as
+        // trophies by players who had no way of knowing they were currency.
+        int toNext = abilities.usesToNextLevel(user);
+        user.sendMessage(Component.text(toNext > 0
+                ? "  " + toNext + " more use(s) for the next power"
+                : "  every power is yours", LABEL));
+        if (toNext > 0) {
+            user.sendMessage(messages.get("ability.how-to-level"));
+        }
         user.sendMessage(Component.text("  /ability <1-5> [player]", LOCKED));
         return Command.SINGLE_SUCCESS;
     }

@@ -9,9 +9,12 @@ import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
 import com.liminalis.plugin.rescue.RescueService;
+import com.liminalis.plugin.singularity.LoreBooks;
 import com.liminalis.plugin.singularity.SingularityResidue;
 import com.liminalis.plugin.text.Messages;
 import org.bukkit.entity.Entity;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -208,14 +211,19 @@ public final class AbilityService implements Listener {
     // ------------------------------------------------------------------------ accelerant
 
     /**
-     * Spending residue to hurry an ability along.
+     * Turning what the Singularity leaves behind into progress.
      *
-     * <p>This is why residue exists as a currency at all. An ability gated behind something
-     * its owner rarely does - a priest who never fights undead, say - would otherwise leave
-     * them staring at a tier they can read about and never reach.
+     * <p>Both drops feed an ability, and both use the same gesture: sneak and use. Residue is
+     * the small steady one that arrives with every kill; a book is the large rare one, worth
+     * several shards, and destroyed by being studied - so the copy on your shelf stays a book
+     * and the duplicates become fuel.
+     *
+     * <p>An ordinary right-click still opens a book to read. Studying has to be deliberate,
+     * because it is not reversible and the five of them are the only account of what any of
+     * this is.
      */
     @EventHandler(priority = EventPriority.HIGH)
-    public void onSpendResidue(PlayerInteractEvent event) {
+    public void onSpendDrop(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
                 || (event.getAction() != Action.RIGHT_CLICK_AIR
                     && event.getAction() != Action.RIGHT_CLICK_BLOCK)) {
@@ -223,26 +231,81 @@ public final class AbilityService implements Listener {
         }
         Player player = event.getPlayer();
         ItemStack held = event.getItem();
-        if (!SingularityResidue.is(plugin, held) || !player.isSneaking()) {
+        if (!player.isSneaking() || held == null) {
+            return;
+        }
+
+        boolean residue = SingularityResidue.is(plugin, held);
+        String bookId = residue ? null : LoreBooks.idOf(plugin, held);
+        if (!residue && bookId == null) {
             return;
         }
         event.setCancelled(true);
 
-        Optional<Ability> ability = abilityOf(player);
-        if (ability.isEmpty()) {
+        if (abilityOf(player).isEmpty()) {
             messages.send(player, "ability.none-to-feed");
             return;
         }
-        if (usesToNextLevel(player) <= 0) {
+        int wanted = usesToNextLevel(player);
+        if (wanted <= 0) {
             messages.send(player, "ability.already-complete");
             return;
         }
 
-        int gained = config.get().abilities().usesPerResidue();
+        if (residue) {
+            spendResidue(player, held, wanted);
+        } else {
+            studyBook(player, held, bookId);
+        }
+    }
+
+    /**
+     * Spends as much of the stack as the next level can absorb.
+     *
+     * <p>One shard per click was the original, and it was the reason the accelerant felt like
+     * a chore rather than a reward: a player who had been saving up stood there clicking
+     * twenty times. It now spends what is needed and stops - never the whole stack when half
+     * of it would do, so nothing is wasted overshooting a level the player was one shard
+     * away from anyway.
+     */
+    private void spendResidue(Player player, ItemStack held, int wanted) {
+        int perShard = Math.max(1, config.get().abilities().usesPerResidue());
+        int spent = AbilityLevels.shardsToSpend(wanted, perShard, held.getAmount());
+        if (spent <= 0) {
+            return;
+        }
+
+        held.setAmount(held.getAmount() - spent);
+        int gained = spent * perShard;
+        recordUse(player, gained);
+
+        player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 0.8f, 1.4f);
+        player.getWorld().spawnParticle(Particle.ENCHANT,
+                player.getLocation().add(0, 1.2, 0), 20 + spent * 4, 0.4, 0.6, 0.4, 0.6);
+        messages.send(player, "ability.fed",
+                Messages.placeholder("amount", gained),
+                Messages.placeholder("spent", spent));
+    }
+
+    /**
+     * Burns a book for what is written in it.
+     *
+     * <p>Worth several shards, because a book is far rarer than the residue that drops
+     * alongside it - and because giving up the only account of what the grey is should be
+     * worth something in proportion to what it costs.
+     */
+    private void studyBook(Player player, ItemStack held, String bookId) {
+        int gained = config.get().abilities().usesPerBook();
         held.subtract();
         recordUse(player, gained);
 
-        messages.send(player, "ability.fed", Messages.placeholder("amount", gained));
+        player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 1.0f, 0.8f);
+        player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 0.8f, 1.2f);
+        player.getWorld().spawnParticle(Particle.ENCHANT,
+                player.getLocation().add(0, 1.2, 0), 60, 0.5, 0.8, 0.5, 1.0);
+        messages.send(player, "ability.studied",
+                Messages.placeholder("book", LoreBooks.byId(bookId).title()),
+                Messages.placeholder("amount", gained));
     }
 
     // -------------------------------------------------------------------------- lookup

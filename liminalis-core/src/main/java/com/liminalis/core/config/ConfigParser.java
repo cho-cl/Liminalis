@@ -174,8 +174,11 @@ public final class ConfigParser {
             ladder.add(uses);
         }
 
-        return new AbilitySettings(ladder, reader.wholeNumber("abilities.uses-per-residue",
-                AbilitySettings.DEFAULTS.usesPerResidue(), 1, 10_000));
+        return new AbilitySettings(ladder,
+                reader.wholeNumber("abilities.uses-per-residue",
+                        AbilitySettings.DEFAULTS.usesPerResidue(), 1, 10_000),
+                reader.wholeNumber("abilities.uses-per-book",
+                        AbilitySettings.DEFAULTS.usesPerBook(), 1, 10_000));
     }
 
     /**

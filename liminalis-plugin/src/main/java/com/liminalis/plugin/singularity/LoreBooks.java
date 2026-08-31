@@ -5,8 +5,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 
@@ -51,6 +54,27 @@ public final class LoreBooks {
                 onLimbo(), onTheLiminalis(), onBoons(), onTheSingularity(), onReturn());
         books.forEach(LoreBook::validate);
         return books;
+    }
+
+    private static final String KEY = "lore_book";
+
+    public static NamespacedKey key(JavaPlugin plugin) {
+        return new NamespacedKey(plugin, KEY);
+    }
+
+    /**
+     * Which book this stack is, or null if it is not one of ours.
+     *
+     * <p>Returns the id rather than a boolean because studying one needs to know which was
+     * studied - the five are not interchangeable, and a player working through the set is
+     * doing something different from a player burning five copies of the same one.
+     */
+    public static String idOf(JavaPlugin plugin, ItemStack item) {
+        if (item == null || item.getType() != Material.WRITTEN_BOOK || !item.hasItemMeta()) {
+            return null;
+        }
+        return item.getItemMeta().getPersistentDataContainer()
+                .get(key(plugin), PersistentDataType.STRING);
     }
 
     public static LoreBook byId(String id) {
@@ -209,8 +233,15 @@ public final class LoreBooks {
             }
         }
 
-        /** Builds the physical book that drops in the world. */
-        public ItemStack toItem() {
+        /**
+         * Builds the physical book that drops in the world.
+         *
+         * <p>Tagged in persistent data rather than recognised by title, so a player can
+         * rename one in an anvil without it stopping being a Singularity book, and cannot
+         * forge one by renaming a book they wrote themselves - which would otherwise be a
+         * way to write your own progress.
+         */
+        public ItemStack toItem(JavaPlugin plugin) {
             ItemStack item = new ItemStack(Material.WRITTEN_BOOK);
             BookMeta meta = (BookMeta) item.getItemMeta();
 
@@ -221,6 +252,13 @@ public final class LoreBooks {
                     .toArray(Component[]::new));
             meta.displayName(Component.text(title, NamedTextColor.GRAY)
                     .decoration(TextDecoration.ITALIC, false));
+            meta.lore(List.of(
+                    Component.text("Sneak and use to study it.", NamedTextColor.DARK_GRAY)
+                            .decoration(TextDecoration.ITALIC, false),
+                    Component.text("Studying destroys the copy.", NamedTextColor.DARK_GRAY)
+                            .decoration(TextDecoration.ITALIC, false)));
+            meta.getPersistentDataContainer().set(
+                    key(plugin), PersistentDataType.STRING, id);
 
             item.setItemMeta(meta);
             return item;

@@ -227,9 +227,18 @@ abilities:
   uses-for-level-4: 150
   uses-for-level-5: 300
 
-  # What one shard of Singularity residue is worth, for somebody whose ability rarely finds
-  # an occasion to be used. Sneak and right-click a shard to spend it.
+  # What the Singularity leaves behind is the other way up the ladder. Sneak and use either
+  # drop to spend it - an ordinary right-click still opens a book to read, so studying one
+  # has to be deliberate.
+  #
+  # Residue spends as much of the stack as the next level can absorb and then stops, so
+  # nothing is wasted overshooting a level you were one shard away from.
+  #
+  # A book is destroyed by studying it. Worth several shards because it is far rarer, and
+  # because the five of them are the only account of what any of this is - the copy on your
+  # shelf should stay a book, and the duplicates are the fuel.
   uses-per-residue: 25
+  uses-per-book: 100
 
 rescue:
   # How long a living player may stay in the grey before it starts keeping things.

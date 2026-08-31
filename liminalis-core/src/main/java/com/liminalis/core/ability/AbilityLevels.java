@@ -98,6 +98,26 @@ public final class AbilityLevels {
     }
 
     /**
+     * How many shards to take out of a stack to cover what is still needed.
+     *
+     * <p>Rounds up, because a partial shard buys nothing - and then stops. Spending the whole
+     * stack would be simpler and would quietly burn everything a player had been saving on a
+     * level they were one shard away from, which is the sort of generosity nobody thanks you
+     * for. Never more than they are holding, obviously.
+     *
+     * @param usesWanted uses still needed for the next level
+     * @param perShard   what one shard is worth
+     * @param held       how many are in the stack
+     */
+    public static int shardsToSpend(int usesWanted, int perShard, int held) {
+        if (usesWanted <= 0 || perShard <= 0 || held <= 0) {
+            return 0;
+        }
+        int needed = (usesWanted + perShard - 1) / perShard;
+        return Math.min(held, needed);
+    }
+
+    /**
      * The use count that sits exactly at the start of a level.
      *
      * <p>Needed because an admin setting somebody's level has to leave the counter agreeing

@@ -274,6 +274,7 @@ singularity:
   residue:
     name: "<dark_aqua>Residue</dark_aqua>"
     lore: "<dark_gray>What is left when one of them stops.</dark_gray>"
+    use: "<dark_gray>Sneak and use to feed your ability.</dark_gray>"
 
 # ---------------------------------------------------------------------------------------
 # Rescue - crossing into the grey to fetch someone back
@@ -315,7 +316,9 @@ rescue:
 ability:
   granted: "<prefix><gradient:#c9d6e3:#8f7fbf><ability></gradient><newline><dark_gray>  <description></dark_gray><newline><gray>  Use it with </gray><white>/ability</white>"
   level-gained: "<prefix><gradient:#c9d6e3:#8f7fbf>Something opens up.</gradient><newline><white>  <level>: <granted></white><newline><gray>  /ability <level></gray>"
-  fed: "<gray>The residue goes into it and does not come back. <white>+<amount></white></gray>"
+  fed: "<gray><spent> shard(s) go into it and do not come back. <white>+<amount></white></gray>"
+  studied: "<gray>You read <white><book></white> until there is nothing left of it to read. <white>+<amount></white></gray>"
+  how-to-level: "<dark_gray>  Use it, or sneak-use what the Singularity leaves - residue, or a book you can spare.</dark_gray>"
   none-to-feed: "<gray>You have no ability for it to go into.</gray>"
   already-complete: "<gray>There is nothing left of it to open.</gray>"
 

@@ -391,6 +391,7 @@ class ConfigParserTest {
         values.put("abilities.uses-for-level-4", 30);
         values.put("abilities.uses-for-level-5", 40);
         values.put("abilities.uses-per-residue", 5);
+        values.put("abilities.uses-per-book", 40);
 
         ConfigResult result = ConfigParser.parse(values);
 
@@ -398,6 +399,7 @@ class ConfigParserTest {
         assertThat(result.config().abilities().usesPerLevel())
                 .containsExactly(10, 20, 30, 40);
         assertThat(result.config().abilities().usesPerResidue()).isEqualTo(5);
+        assertThat(result.config().abilities().usesPerBook()).isEqualTo(40);
     }
 
     @Test

@@ -42,8 +42,14 @@ public final class SingularityResidue {
 
         meta.displayName(messages.get("singularity.residue.name")
                 .decoration(TextDecoration.ITALIC, false));
-        meta.lore(List.of(messages.get("singularity.residue.lore")
-                .decoration(TextDecoration.ITALIC, false)));
+        // The second line is the whole reason anybody finds out this is spendable. Residue
+        // used to say only what it was, and a currency nothing tells you how to spend is
+        // indistinguishable from a trophy.
+        meta.lore(List.of(
+                messages.get("singularity.residue.lore")
+                        .decoration(TextDecoration.ITALIC, false),
+                messages.get("singularity.residue.use")
+                        .decoration(TextDecoration.ITALIC, false)));
         meta.setEnchantmentGlintOverride(true);
         meta.getPersistentDataContainer().set(key(plugin), PersistentDataType.BYTE, (byte) 1);
 

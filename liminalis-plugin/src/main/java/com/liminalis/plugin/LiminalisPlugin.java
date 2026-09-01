@@ -34,6 +34,7 @@ import com.liminalis.plugin.lives.DeathListener;
 import com.liminalis.plugin.modifier.ModifierRegistry;
 import com.liminalis.plugin.modifier.ModifierService;
 import com.liminalis.plugin.profile.ProfileManager;
+import com.liminalis.plugin.text.MessageAudit;
 import com.liminalis.plugin.text.Messages;
 import com.liminalis.plugin.trait.FirstJoinService;
 import com.liminalis.plugin.trait.MarkOfReturn;
@@ -172,6 +173,16 @@ public final class LiminalisPlugin extends JavaPlugin {
         // no error, no log line and no way for a player to tell. Refusing to start is the
         // only version of this failure anybody ever finds out about.
         Injuries.validate(new TraitTuning(() -> config.get().traits().tuning()));
+
+        // Every message key the registry will ever ask for, checked against the file that
+        // actually loaded. Logged rather than thrown: a missing line is embarrassing, not
+        // dangerous, and refusing to start a live server over one would be the worse failure.
+        List<String> missingText = MessageAudit.missingKeys(registry, messages);
+        if (!missingText.isEmpty()) {
+            getLogger().warning(missingText.size() + " message(s) are missing from"
+                    + " messages.yml. Players will see the key instead of the text:");
+            missingText.forEach(key -> getLogger().warning("  " + key));
+        }
 
         registerCommands();
 

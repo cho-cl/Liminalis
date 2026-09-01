@@ -17,6 +17,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.util.Objects;
@@ -96,7 +97,7 @@ public final class AbilityCommand {
             return Command.SINGLE_SUCCESS;
         }
 
-        Player target = null;
+        LivingEntity target = null;
         if (power.needsTarget()) {
             target = resolveTarget(user, targetName);
             if (target == null) {
@@ -116,7 +117,7 @@ public final class AbilityCommand {
      * all. A name is only necessary when they are behind you, out of reach, or standing in a
      * crowd.
      */
-    private Player resolveTarget(Player user, String named) {
+    private LivingEntity resolveTarget(Player user, String named) {
         if (named != null) {
             Player found = Bukkit.getPlayerExact(named);
             if (found == null) {
@@ -133,9 +134,12 @@ public final class AbilityCommand {
             return found;
         }
 
+        // Anything alive, not only a player. Healing was unusable on a wolf, a villager
+        // or a horse for no reason anybody could have explained, and the refusal looked
+        // identical to aiming at nothing at all.
         Entity aimed = user.getTargetEntity(AIM_RANGE);
-        if (aimed instanceof Player player) {
-            return player;
+        if (aimed instanceof LivingEntity living && !living.equals(user)) {
+            return living;
         }
         messages.send(user, "ability.no-target");
         return null;

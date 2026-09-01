@@ -1,5 +1,6 @@
 package com.liminalis.plugin.ability;
 
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 /**
@@ -41,7 +42,7 @@ public interface Power {
     /** Seconds before it can be used again. Zero for powers with no cooldown. */
     long cooldownSeconds();
 
-    /** Whether this power does something to another player, and so needs one aimed at. */
+    /** Whether this power does something to something else, and so needs one aimed at. */
     default boolean needsTarget() {
         return false;
     }
@@ -49,10 +50,12 @@ public interface Power {
     /**
      * Fires the power.
      *
-     * @param target who they were aiming at, or null - only ever non-null when
-     *               {@link #needsTarget()} is true and someone was actually found
+     * @param target what they were aiming at, or null - only ever non-null when
+     *               {@link #needsTarget()} is true and something was actually found.
+     *               Any living thing, not only a player: a priest who cannot put their hands
+     *               on a wounded wolf is a priest with an arbitrary rule attached
      * @return true if it fired and the cooldown should start; false if it was refused, in
      *         which case the implementation has already explained why
      */
-    boolean use(Player user, Player target);
+    boolean use(Player user, LivingEntity target);
 }

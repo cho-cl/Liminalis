@@ -13,6 +13,8 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ExperienceOrb;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -73,7 +75,8 @@ public final class DroneService implements Listener {
         this.profiles = Objects.requireNonNull(profiles, "profiles");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.debug = Objects.requireNonNull(debug, "debug");
-        this.control = new DroneControl(plugin, tuning, messages);
+        this.control = new DroneControl(plugin, tuning, messages,
+                new PilotKit(profiles, plugin.getLogger()));
     }
 
     public void start() {
@@ -137,6 +140,16 @@ public final class DroneService implements Listener {
             if (damage != null) {
                 damage.setBaseValue(tuning.get("drones.attack-damage", 3.0));
             }
+            // A vanilla bee is slower than a walking player. Raising the movement attribute
+            // as well as the pathfinding speed is what actually makes a drone keep up.
+            var flight = spawned.getAttribute(Attribute.FLYING_SPEED);
+            if (flight != null) {
+                flight.setBaseValue(tuning.get("drones.flying-speed", 0.9));
+            }
+            var move = spawned.getAttribute(Attribute.MOVEMENT_SPEED);
+            if (move != null) {
+                move.setBaseValue(tuning.get("drones.flying-speed", 0.9));
+            }
         });
         fleet.add(bee);
 
@@ -193,6 +206,7 @@ public final class DroneService implements Listener {
         for (int i = 0; i < drones.size(); i++) {
             Bee bee = drones.get(i);
             Drone.keepAlive(bee);
+            yieldToBuilder(fleet, bee);
 
             if (bee.equals(fleet.controlled())) {
                 continue;
@@ -216,6 +230,31 @@ public final class DroneService implements Listener {
             }
             seekTrouble(owner, fleet, bee);
             follow(owner, bee, i, drones.size(), follow, speed);
+        }
+    }
+
+    /**
+     * A drone carrying a block outranks one that only wants to dig.
+     *
+     * <p>Queue five blocks with one drone loaded and the swarm used to race: whichever
+     * happened to arrive first decided whether that spot ended up mined or built on, which
+     * made building with drones a coin toss. Placing now wins outright - a player who has
+     * deliberately loaded a drone has said what they want the swarm to be for, and a block
+     * that gets mined can be placed again while one that gets built over has to be broken.
+     */
+    private void yieldToBuilder(DroneFleet fleet, Bee bee) {
+        if (!(fleet.jobOf(bee) instanceof DroneFleet.Job.Mine mine)) {
+            return;
+        }
+        for (Bee other : fleet.drones()) {
+            if (other.equals(bee)) {
+                continue;
+            }
+            if (fleet.jobOf(other) instanceof DroneFleet.Job.Place place
+                    && place.against().getBlock().equals(mine.block().getBlock())) {
+                fleet.finish(bee);
+                return;
+            }
         }
     }
 
@@ -294,12 +333,16 @@ public final class DroneService implements Listener {
     }
 
     /**
-     * Drags something back to the player.
+     * Flies to the thing, takes hold of it, and brings it back.
      *
-     * <p>Velocity rather than making it a passenger. Riding a bee is a vanilla behaviour with
-     * its own rules about what can sit on what, and half the things worth fetching - an item,
-     * a boat, another player - cannot. Pulling works on all of them and looks like a swarm
-     * carrying something, which is what was wanted.
+     * <p>Two stages, and the first one is what was missing. The drone used to tug its cargo
+     * from wherever it happened to be, so a player watched an item slide across the ground
+     * toward them while a bee hovered somewhere else entirely - the ability worked and looked
+     * like nothing was doing it. Now it flies over first, and nothing moves until it arrives.
+     *
+     * <p>Once it has hold, an item rides the drone as a passenger, which is exact and looks
+     * like carrying. Anything living is pulled instead: a bee cannot seat a cow, and half the
+     * things worth fetching refuse to be passengers at all.
      */
     private void haul(Player owner, DroneFleet fleet, Bee bee,
                       DroneFleet.Job.Carry carry, double speed) {
@@ -309,22 +352,52 @@ public final class DroneService implements Listener {
             fleet.finish(bee);
             return;
         }
-        double distance = cargo.getLocation().distance(owner.getLocation());
-        if (distance < tuning.get("drones.carry-delivered", 3.0)) {
+
+        boolean holding = cargo.getVehicle() != null && cargo.getVehicle().equals(bee);
+        if (!holding) {
+            // Stage one: get there. Nothing is dragged until the drone is on top of it.
+            double reach = tuning.get("drones.carry-grab-range", 2.0);
+            if (bee.getLocation().distance(cargo.getLocation()) > reach) {
+                bee.getPathfinder().moveTo(cargo.getLocation().add(0, 0.6, 0), speed);
+                bee.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
+                        bee.getLocation(), 1, 0.1, 0.1, 0.1, 0.0);
+                return;
+            }
+            if (cargo instanceof Item || cargo instanceof ExperienceOrb) {
+                // Seated on the drone. Exact, and unmistakably being carried.
+                bee.addPassenger(cargo);
+            }
+            bee.getWorld().playSound(bee.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.7f, 1.8f);
+            holding = true;
+        }
+
+        double distance = bee.getLocation().distance(owner.getLocation());
+        if (distance < tuning.get("drones.carry-delivered", 2.5)) {
+            if (cargo.getVehicle() != null) {
+                cargo.leaveVehicle();
+            }
+            cargo.teleport(owner.getLocation().add(0, 0.4, 0));
             fleet.finish(bee);
-            cargo.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
-                    cargo.getLocation(), 12, 0.3, 0.3, 0.3, 0.05);
+            bee.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
+                    owner.getLocation().add(0, 1.0, 0), 12, 0.3, 0.3, 0.3, 0.05);
+            bee.getWorld().playSound(owner.getLocation(),
+                    Sound.BLOCK_BEEHIVE_EXIT, 0.7f, 1.6f);
             return;
         }
 
-        bee.getPathfinder().moveTo(cargo.getLocation().add(0, 1.2, 0), speed);
-        Vector pull = owner.getLocation().toVector()
-                .subtract(cargo.getLocation().toVector()).normalize()
-                .multiply(tuning.get("drones.carry-pull", 0.28))
-                .setY(tuning.get("drones.carry-lift", 0.12));
-        cargo.setVelocity(cargo.getVelocity().multiply(0.6).add(pull));
+        // Stage two: home. A passenger comes along for free; anything else gets towed.
+        bee.getPathfinder().moveTo(owner.getLocation().add(0, 1.2, 0), speed);
+        if (cargo.getVehicle() == null) {
+            Vector pull = bee.getLocation().toVector()
+                    .subtract(cargo.getLocation().toVector());
+            if (pull.lengthSquared() > 0.01) {
+                pull = pull.normalize().multiply(tuning.get("drones.carry-pull", 0.45))
+                        .setY(tuning.get("drones.carry-lift", 0.18));
+                cargo.setVelocity(cargo.getVelocity().multiply(0.5).add(pull));
+            }
+        }
         cargo.getWorld().spawnParticle(Particle.ELECTRIC_SPARK,
-                cargo.getLocation().add(0, 1.0, 0), 2, 0.2, 0.2, 0.2, 0.0);
+                cargo.getLocation().add(0, 0.6, 0), 2, 0.2, 0.2, 0.2, 0.0);
     }
 
     /** Blocks a drone is allowed to take down. */
@@ -498,6 +571,18 @@ public final class DroneService implements Listener {
         if (player != null) {
             messages.send(player, "ability.drones.lost");
         }
+    }
+
+    /**
+     * Hands back anything a crash interrupted.
+     *
+     * <p>The one listener here that exists purely for the unhappy path. A player whose server
+     * died while they were flying a drone logs back in with their own things - the whole
+     * reason it is safe to empty a pack at all.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        control.kit().restoreIfInterrupted(event.getPlayer());
     }
 
     /** Logging out sends them away. Bees with no owner online are nobody's problem to have. */

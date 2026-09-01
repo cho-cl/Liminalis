@@ -30,7 +30,7 @@ import java.util.UUID;
  */
 public final class ProfileCodec {
 
-    public static final int CURRENT_SCHEMA_VERSION = 4;
+    public static final int CURRENT_SCHEMA_VERSION = 5;
 
     private static final String SCHEMA_VERSION = "schemaVersion";
     private static final String ID = "id";
@@ -41,6 +41,7 @@ public final class ProfileCodec {
     private static final String LIMBO_SINCE = "limboSince";
     private static final String GHOST_COOLDOWN_UNTIL = "ghostVisitCooldownUntil";
     private static final String CROSSING_COOLDOWN_UNTIL = "crossingCooldownUntil";
+    private static final String STORED_INVENTORY = "storedInventory";
     private static final String TRAIT_IDS = "traitIds";
     private static final String BLESSING_ID = "blessingId";
     private static final String CURSE_ID = "curseId";
@@ -75,6 +76,7 @@ public final class ProfileCodec {
         root.addProperty(LIMBO_SINCE, profile.limboSince());
         root.addProperty(GHOST_COOLDOWN_UNTIL, profile.ghostVisitCooldownUntil());
         root.addProperty(CROSSING_COOLDOWN_UNTIL, profile.crossingCooldownUntil());
+        root.addProperty(STORED_INVENTORY, profile.storedInventory());
 
         root.add(TRAIT_IDS, toArray(profile.traitIds()));
         root.addProperty(BLESSING_ID, profile.blessingId());
@@ -120,6 +122,7 @@ public final class ProfileCodec {
         profile.setLimboSince(optionalLong(root, LIMBO_SINCE));
         profile.setGhostVisitCooldownUntil(optionalLong(root, GHOST_COOLDOWN_UNTIL));
         profile.setCrossingCooldownUntil(optionalLong(root, CROSSING_COOLDOWN_UNTIL));
+        profile.setStoredInventory(nullableString(root, STORED_INVENTORY));
 
         profile.replaceTraits(optionalStringList(root, TRAIT_IDS));
         profile.setBlessingId(nullableString(root, BLESSING_ID));
@@ -171,6 +174,11 @@ public final class ProfileCodec {
                 clearRetiredBoons(root);
                 // fall through
             case 4:
+                // Version 5 added the put-aside inventory. An absent field reads as "they
+                // are carrying their own", which is right for every profile written before
+                // anybody could fly a drone.
+                // fall through
+            case 5:
                 break;
             default:
                 throw new ProfileFormatException(

@@ -349,6 +349,37 @@ ability:
     level4: "Consecrate"
     level5: "Close the Wound"
 
+    lay_hands:
+      name: "Lay Hands"
+      description: "Heals whoever you are aiming at and closes their ordinary wounds. Works on anything alive - a person, a wolf, a horse."
+    mend_self:
+      name: "Mend Self"
+      description: "Patches yourself up. Deliberately slower and weaker than helping somebody else."
+    holy_smite:
+      name: "Holy Smite"
+      description: "Burns every undead thing standing near you. The living are untouched."
+    consecrate:
+      name: "Consecrate"
+      description: "Regeneration and resistance for everyone standing with you, for a while."
+    close_the_wound:
+      name: "Close the Wound"
+      description: "Closes a mortal wound. The only thing in the world that can, short of dying."
+
+    healed: "<prefix><green>You lay hands on <white><player></white>.</green>"
+    healed-by: "<prefix><green><white><player></white> lays hands on you. It stops hurting.</green>"
+    already-whole: "<gray><player> is not hurt, and has nothing you can close.</gray>"
+    injuries-closed: "<green>  Closed: <white><injuries></white></green>"
+    mended: "<prefix><green>You put yourself back together, mostly.</green>"
+    self-whole: "<gray>There is nothing wrong with you.</gray>"
+    smote: "<prefix><gold>Light falls. <white><count></white> of them burn.</gold>"
+    nothing-to-smite: "<gray>Nothing near you that light would object to.</gray>"
+    consecrated: "<prefix><gold>The ground is holy for a while. <white><count></white> under it.</gold>"
+    consecrated-by: "<prefix><gold><white><player></white> makes the ground under you holy.</gold>"
+    treated: "<prefix><gradient:#ffe294:#c9d6e3>You close what would not have closed. <white><player></white> is whole.</gradient>"
+    treated-by: "<prefix><gradient:#ffe294:#c9d6e3><white><player></white> closes a wound that was never going to heal.</gradient>"
+    nothing-to-treat: "<gray><player> has no mortal wound to close.</gray>"
+    only-people: "<gray>A <player> has no wounds of that kind to close.</gray>"
+
   drones:
     name: "<yellow>Drones</yellow>"
     description: "Bees that work for you. One more of them every level, and each level teaches the swarm something new."
@@ -397,12 +428,14 @@ ability:
     now-holding: "<gray>It takes the item and holds it above itself.</gray>"
     took-back: "<gray>You take it back off the drone.</gray>"
     empty-handed: "<gray>It is not carrying anything.</gray>"
+    temperament-set: "<prefix><gray>Your drones are now <mode>.</gray>"
     lost: "<prefix><red>A drone stops.</red>"
     piloting: "<prefix><yellow>You are looking through drone <white><drone></white> of <white><total></white>.</yellow><newline><gray>  Two slots. Digging is slow. /ability 5 again to move on.</gray>"
     released: "<prefix><gray>You are yourself again.</gray>"
     too-far: "<prefix><gray>Too far from your body. The connection goes.</gray>"
     two-slots: "<gray>Only two slots while you are flying one.</gray>"
     not-in-this-mode: "<gray>Not from this game mode.</gray>"
+    cannot-stow: "<red>Could not put your things aside safely, so nothing was taken. Try again, and tell the Creator if it keeps happening.</red>"
 
     lay_hands:
       name: "Lay Hands"

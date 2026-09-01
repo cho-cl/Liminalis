@@ -31,12 +31,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * broken and placed, chests open, and the world behaves normally, none of which a spectator
  * can do.
  *
- * <p><strong>The two slots are a restriction, not a swap.</strong> Handing somebody a
- * temporary inventory and giving the real one back afterwards is the obvious implementation
- * and the wrong one: on a server where a life is one of three, a crash between the two halves
- * costs a player everything they own. So nothing is ever moved. The other slots are refused
- * while piloting and returned the moment it ends, which is the same experience with no way to
- * lose anything.
+ * <p><strong>You look like a bee, not like a person wearing armour.</strong> The first
+ * version hid the drone and showed the player, which meant everybody watching saw somebody in
+ * netherite hovering in mid-air. It is the other way round now: the pilot is made invisible
+ * and the real bee is kept at their position, so to every observer - and to the pilot in
+ * third person - there is a bee there and nothing else.
+ *
+ * <p>The pack is genuinely emptied rather than merely restricted, which is what was asked
+ * for, and {@link PilotKit} is where all the care about that lives: the items are written to
+ * the profile before anything is taken, so there is no moment at which they exist nowhere.
  */
 public final class DroneControl implements Listener {
 
@@ -46,15 +49,22 @@ public final class DroneControl implements Listener {
     private final JavaPlugin plugin;
     private final TraitTuning tuning;
     private final Messages messages;
+    private final PilotKit kit;
 
     /** Where each pilot was standing when they left, so they can be put back. */
     private final Map<UUID, Location> bodies = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> couldFly = new ConcurrentHashMap<>();
 
-    public DroneControl(JavaPlugin plugin, TraitTuning tuning, Messages messages) {
+    public DroneControl(JavaPlugin plugin, TraitTuning tuning, Messages messages,
+                        PilotKit kit) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.tuning = Objects.requireNonNull(tuning, "tuning");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.kit = Objects.requireNonNull(kit, "kit");
+    }
+
+    public PilotKit kit() {
+        return kit;
     }
 
     public boolean isPiloting(Player player) {
@@ -77,6 +87,12 @@ public final class DroneControl implements Listener {
             return false;
         }
         if (!isPiloting(player)) {
+            // Everything that has to be put back, recorded before anything is changed - and
+            // the pack put aside before the flight begins, so a refusal here costs nothing.
+            if (!kit.putAside(player)) {
+                messages.send(player, "ability.drones.cannot-stow");
+                return false;
+            }
             bodies.put(player.getUniqueId(), player.getLocation().clone());
             couldFly.put(player.getUniqueId(), player.getAllowFlight());
         }
@@ -87,7 +103,13 @@ public final class DroneControl implements Listener {
         player.setFlying(true);
         player.teleport(bee.getLocation().clone().add(0, 0.4, 0));
         player.getInventory().setHeldItemSlot(0);
-        bee.setInvisible(true);
+
+        // The player disappears and the bee stays. Anybody watching sees a drone, which is
+        // the whole idea - the previous arrangement showed a person in full armour hovering
+        // in mid-air while the actual bee was hidden somewhere inside them.
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY,
+                PotionEffect.INFINITE_DURATION, 0, true, false, false));
+        bee.setInvisible(false);
         bee.setSilent(true);
         bee.setTarget(null);
 
@@ -118,6 +140,8 @@ public final class DroneControl implements Listener {
         if (body == null) {
             return;
         }
+        player.removePotionEffect(PotionEffectType.INVISIBILITY);
+        kit.giveBack(player);
 
         // Read before removing. Removing and then reading gives null every time, which would
         // have quietly taken flight away from anybody who legitimately had it.
@@ -148,10 +172,18 @@ public final class DroneControl implements Listener {
             release(player, fleet);
             return;
         }
-        bee.teleport(player.getLocation());
-        bee.setInvisible(true);
+        // Held just behind and below the camera so the pilot's own view is not filled with
+        // their drone, while everybody else sees it exactly where the player is.
+        bee.teleport(player.getLocation().clone().subtract(
+                player.getLocation().getDirection().multiply(0.4)).add(0, -0.3, 0));
+        bee.setInvisible(false);
         bee.setTarget(null);
         Drone.keepAlive(bee);
+
+        if (!player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY,
+                    PotionEffect.INFINITE_DURATION, 0, true, false, false));
+        }
 
         // Flight is re-asserted because the server takes it away on its own whenever the
         // player lands or changes world, and a pilot dropping out of the sky mid-flight would
@@ -169,9 +201,6 @@ public final class DroneControl implements Listener {
             player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE,
                     40, slowness - 1, true, false, false));
         }
-        if (player.getInventory().getHeldItemSlot() >= USABLE_SLOTS) {
-            player.getInventory().setHeldItemSlot(0);
-        }
 
         double range = tuning.get("drones.control-range", 48.0);
         Location body = bodies.get(player.getUniqueId());
@@ -186,23 +215,16 @@ public final class DroneControl implements Listener {
         }
     }
 
-    // ---------------------------------------------------------------------- restriction
-
-    /** A pilot may only reach the first two hotbar slots. */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onSlotChange(PlayerItemHeldEvent event) {
-        if (isPiloting(event.getPlayer()) && event.getNewSlot() >= USABLE_SLOTS) {
-            event.setCancelled(true);
-            messages.send(event.getPlayer(), "ability.drones.two-slots");
-        }
-    }
+    // ---------------------------------------------------------------------- the pack
 
     /**
-     * And may not rearrange their own pack while piloting.
+     * Two slots, and they are the only two there are.
      *
-     * <p>Chests, barrels and everything else still open - that was asked for explicitly - so
-     * this refuses only clicks in the player's own inventory. Taking things out of a chest and
-     * into the two slots you can hold is exactly the intended use.
+     * <p>Nothing has to be blocked any more. The pilot's own pack was put aside on the way
+     * in, so what they are carrying is whatever they have picked up since - and a drone that
+     * can hold two things is a drone that can fetch two things out of a chest, which is what
+     * the two slots were always for. Anything past the second is refused so that a full
+     * inventory cannot be flown home in one trip.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
@@ -216,5 +238,17 @@ public final class DroneControl implements Listener {
         }
         event.setCancelled(true);
         messages.send(player, "ability.drones.two-slots");
+    }
+
+    /** And nothing can be picked up into a slot that does not exist. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPickUp(org.bukkit.event.entity.EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player) || !isPiloting(player)) {
+            return;
+        }
+        if (player.getInventory().firstEmpty() < 0
+                || player.getInventory().firstEmpty() >= USABLE_SLOTS) {
+            event.setCancelled(true);
+        }
     }
 }

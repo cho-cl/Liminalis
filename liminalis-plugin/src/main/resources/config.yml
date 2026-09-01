@@ -219,7 +219,10 @@ traits:
     # arrow would make the ability a chore.
     drones.health: 20.0
     drones.attack-damage: 3.0
-    drones.speed: 1.2
+    # Pathfinding speed. Bees are slow by nature and a drone that cannot keep up
+    # with a sprinting player is a drone that is always somewhere behind you.
+    drones.speed: 2.4
+    drones.flying-speed: 0.9
     # How far out they hover from their owner, and how far they may stray before being
     # recalled. Leashing matters more than it sounds - a drone lost across a portal is a bee
     # nobody owns, wandering somebody else's base forever.
@@ -231,9 +234,12 @@ traits:
     drones.hunt-range: 12.0
     # Bringing something back: how hard they pull it, how much they lift it, and how close
     # counts as delivered.
-    drones.carry-pull: 0.28
-    drones.carry-lift: 0.12
-    drones.carry-delivered: 3.0
+    # A drone flies to the thing first and only then takes hold, so grab-range is
+    # how close it has to get before it picks anything up.
+    drones.carry-grab-range: 2.0
+    drones.carry-pull: 0.45
+    drones.carry-lift: 0.18
+    drones.carry-delivered: 2.5
     # Piloting. control-range is the leash on the pilot rather than the drone - a drone flown
     # across the map is a scouting tool that makes the rest of the world small. Mining fatigue
     # is the level of the effect; 0 turns the slowdown off entirely.

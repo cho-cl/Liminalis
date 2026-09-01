@@ -124,6 +124,11 @@ public final class Messages {
         return mini.deserialize(raw, all);
     }
 
+    /** Whether a key is actually defined, for the startup audit. */
+    public boolean has(String key) {
+        return entries.containsKey(key);
+    }
+
     public void send(Audience audience, String key, TagResolver... resolvers) {
         audience.sendMessage(get(key, resolvers));
     }

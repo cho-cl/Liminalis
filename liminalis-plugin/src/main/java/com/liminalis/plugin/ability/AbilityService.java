@@ -15,6 +15,7 @@ import com.liminalis.plugin.text.Messages;
 import org.bukkit.entity.Entity;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -86,7 +87,7 @@ public final class AbilityService implements Listener {
      * a misfire cost the cooldown would punish players for the plugin not telling them the
      * state of the world.
      */
-    public void fire(Player user, Ability ability, Power power, Player target) {
+    public void fire(Player user, Ability ability, Power power, LivingEntity target) {
         // Powers used to require their focus item in hand, and the idea was that an ability
         // should be visible across a field. It cost far more than it bought. Every ability had
         // to ship an item and two message keys before any of its powers would fire at all, so

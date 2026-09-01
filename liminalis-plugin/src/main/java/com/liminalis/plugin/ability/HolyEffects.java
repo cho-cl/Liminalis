@@ -5,7 +5,7 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.LivingEntity;
 
 /**
  * The shapes holy power makes.
@@ -145,8 +145,8 @@ public final class HolyEffects {
         }
     }
 
-    /** A small ring above someone's head. The mark of a priest, and of the blessed. */
-    public static void halo(Player who, int points, Particle particle, Object data) {
+    /** A small ring above something's head. The mark of a priest, and of the blessed. */
+    public static void halo(LivingEntity who, int points, Particle particle, Object data) {
         ring(who.getLocation().add(0, 2.15, 0), 0.45, points, particle, data);
     }
 

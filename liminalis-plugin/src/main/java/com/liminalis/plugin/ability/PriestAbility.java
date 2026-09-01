@@ -1,5 +1,6 @@
 package com.liminalis.plugin.ability;
 
+import com.liminalis.core.ability.Undead;
 import com.liminalis.core.injury.ActiveInjury;
 import com.liminalis.core.injury.InjurySeverity;
 import com.liminalis.core.profile.PlayerProfile;
@@ -146,25 +147,27 @@ public final class PriestAbility implements Ability, Ticking {
         }
 
         @Override
-        public boolean use(Player priest, Player target) {
+        public boolean use(Player priest, LivingEntity target) {
             int healed = restore(target, tuning.get("priest.lay-hands-heal", 6.0));
             List<String> cured = cureMinorInjuries(target);
 
             if (healed == 0 && cured.isEmpty()) {
                 messages.send(priest, "ability.priest.already-whole",
-                        Messages.placeholder("player", target.getName()));
+                        Messages.placeholder("player", nameOf(target)));
                 return false;
             }
 
             layHandsEffect(priest, target);
 
             messages.send(priest, "ability.priest.healed",
-                    Messages.placeholder("player", target.getName()));
-            messages.send(target, "ability.priest.healed-by",
-                    Messages.placeholder("player", priest.getName()));
-            if (!cured.isEmpty()) {
-                messages.send(target, "ability.priest.injuries-closed",
-                        Messages.placeholder("injuries", String.join(", ", cured)));
+                    Messages.placeholder("player", nameOf(target)));
+            if (target instanceof Player healed2) {
+                messages.send(healed2, "ability.priest.healed-by",
+                        Messages.placeholder("player", priest.getName()));
+                if (!cured.isEmpty()) {
+                    messages.send(healed2, "ability.priest.injuries-closed",
+                            Messages.placeholder("injuries", String.join(", ", cured)));
+                }
             }
             return true;
         }
@@ -199,7 +202,7 @@ public final class PriestAbility implements Ability, Ticking {
         }
 
         @Override
-        public boolean use(Player priest, Player ignored) {
+        public boolean use(Player priest, LivingEntity ignored) {
             if (restore(priest, tuning.get("priest.mend-self-heal", 4.0)) == 0) {
                 messages.send(priest, "ability.priest.self-whole");
                 return false;
@@ -237,7 +240,7 @@ public final class PriestAbility implements Ability, Ticking {
         }
 
         @Override
-        public boolean use(Player priest, Player ignored) {
+        public boolean use(Player priest, LivingEntity ignored) {
             double range = tuning.get("priest.smite-range", 6.0);
             double damage = tuning.get("priest.smite-damage", 9.0);
 
@@ -292,7 +295,7 @@ public final class PriestAbility implements Ability, Ticking {
         }
 
         @Override
-        public boolean use(Player priest, Player ignored) {
+        public boolean use(Player priest, LivingEntity ignored) {
             double range = tuning.get("priest.consecrate-range", 10.0);
             int ticks = (int) tuning.get("priest.consecrate-seconds", 12) * 20;
 
@@ -357,8 +360,16 @@ public final class PriestAbility implements Ability, Ticking {
         }
 
         @Override
-        public boolean use(Player priest, Player target) {
-            PlayerProfile theirs = profiles.resident(target.getUniqueId()).orElse(null);
+        public boolean use(Player priest, LivingEntity target) {
+            // The only power that genuinely cannot work on a mob: mortal wounds are a thing
+            // a profile carries, and a wolf does not have one. Said out loud rather than
+            // refused silently, which would look identical to the power being broken.
+            if (!(target instanceof Player person)) {
+                messages.send(priest, "ability.priest.only-people",
+                        Messages.placeholder("player", nameOf(target)));
+                return false;
+            }
+            PlayerProfile theirs = profiles.resident(person.getUniqueId()).orElse(null);
             if (theirs == null) {
                 return false;
             }
@@ -369,19 +380,19 @@ public final class PriestAbility implements Ability, Ticking {
 
             if (mortal.isEmpty()) {
                 messages.send(priest, "ability.priest.nothing-to-treat",
-                        Messages.placeholder("player", target.getName()));
+                        Messages.placeholder("player", person.getName()));
                 return false;
             }
 
             theirs.removeInjury(mortal.get().id());
             profiles.saveNow(theirs);
-            modifiers.applyFromProfile(target);
+            modifiers.applyFromProfile(person);
 
-            closeWoundEffect(priest, target);
+            closeWoundEffect(priest, person);
 
             messages.send(priest, "ability.priest.treated",
-                    Messages.placeholder("player", target.getName()));
-            messages.send(target, "ability.priest.treated-by",
+                    Messages.placeholder("player", person.getName()));
+            messages.send(person, "ability.priest.treated-by",
                     Messages.placeholder("player", priest.getName()));
             return true;
         }
@@ -396,7 +407,7 @@ public final class PriestAbility implements Ability, Ticking {
      * was nearly full is worth almost nothing and pulling somebody off the floor is worth the
      * lot.
      */
-    private int restore(Player player, double amount) {
+    private int restore(LivingEntity player, double amount) {
         AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
         double max = maxHealth == null ? 20.0 : maxHealth.getValue();
         double healed = Math.min(amount, max - player.getHealth());
@@ -408,8 +419,13 @@ public final class PriestAbility implements Ability, Ticking {
     }
 
     /** Clears every ordinary injury, leaving mortal wounds for power five. */
-    private List<String> cureMinorInjuries(Player target) {
-        PlayerProfile theirs = profiles.resident(target.getUniqueId()).orElse(null);
+    private List<String> cureMinorInjuries(LivingEntity target) {
+        if (!(target instanceof Player person)) {
+            // A mob has no wounds to close, and that is not a failure - the healing itself
+            // still landed. Returning nothing lets the caller say so accurately.
+            return List.of();
+        }
+        PlayerProfile theirs = profiles.resident(person.getUniqueId()).orElse(null);
         if (theirs == null) {
             return List.of();
         }
@@ -422,7 +438,7 @@ public final class PriestAbility implements Ability, Ticking {
         }
         cured.forEach(theirs::removeInjury);
         profiles.saveNow(theirs);
-        modifiers.applyFromProfile(target);
+        modifiers.applyFromProfile(person);
         return cured;
     }
 
@@ -445,7 +461,7 @@ public final class PriestAbility implements Ability, Ticking {
      * field who is keeping who alive - which on a server built around cooperating is the
      * single most useful thing a visual effect here can do.
      */
-    private void layHandsEffect(Player priest, Player target) {
+    private void layHandsEffect(Player priest, LivingEntity target) {
         HolyEffects.beam(priest.getEyeLocation(), target.getLocation().add(0, 1.2, 0),
                 24, Particle.END_ROD, null);
         HolyEffects.spiral(target.getLocation(), 2.2, 0.6, 28, 2.0,
@@ -620,7 +636,27 @@ public final class PriestAbility implements Ability, Ticking {
     private record Consecration(Location centre, long expiresAt) {
     }
 
+    /**
+     * Whether this is something Holy Smite is meant to burn.
+     *
+     * <p>Was {@code mob.getCategory() == EntityCategory.UNDEAD}, which is why the power never
+     * worked: the category came back as something other than UNDEAD for ordinary zombies, so
+     * the search found nothing every single time and reported "nothing to smite" perfectly
+     * politely. The list is now written out in core, where it can be tested.
+     */
     private static boolean isUndead(Entity entity) {
-        return entity instanceof Mob mob && mob.getCategory() == EntityCategory.UNDEAD;
+        return Undead.is(entity.getType().name());
+    }
+
+    /** A name worth showing, for anything alive rather than only for players. */
+    private static String nameOf(LivingEntity entity) {
+        if (entity instanceof Player player) {
+            return player.getName();
+        }
+        if (entity.customName() != null) {
+            return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                    .plainText().serialize(entity.customName());
+        }
+        return entity.getType().name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
     }
 }

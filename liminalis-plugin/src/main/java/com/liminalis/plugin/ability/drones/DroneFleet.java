@@ -169,6 +169,36 @@ public final class DroneFleet {
         return true;
     }
 
+    /**
+     * An idle drone that is carrying something, preferred over one that is not.
+     *
+     * <p>Which drone takes a job used to be whichever happened to be first in the list, and
+     * because a drone carrying a block places while an empty one digs, that meant the same
+     * command did opposite things depending on the order the swarm had been summoned in.
+     * Building with drones was a coin toss. A loaded drone now wins: a player who has
+     * deliberately put a block on one has said what they want the swarm to be doing.
+     *
+     * @return a loaded idle drone, or any idle drone, or null if they are all busy
+     */
+    public Bee idleCarrier() {
+        Bee fallback = null;
+        for (Bee bee : drones()) {
+            if (jobs.containsKey(bee.getUniqueId())) {
+                continue;
+            }
+            var equipment = bee.getEquipment();
+            boolean loaded = equipment != null && equipment.getHelmet() != null
+                    && !equipment.getHelmet().getType().isAir();
+            if (loaded) {
+                return bee;
+            }
+            if (fallback == null) {
+                fallback = bee;
+            }
+        }
+        return fallback;
+    }
+
     /** Whether this entity is one of the drones in this fleet. */
     public boolean owns(Entity entity) {
         return entity instanceof Bee bee && drones().contains(bee);

@@ -44,6 +44,20 @@ public final class PlayerProfile {
      */
     private long crossingCooldownUntil;
 
+    /**
+     * A player's own inventory, put aside while they are flying a drone.
+     *
+     * <p>On the profile rather than in memory, and that is the entire reason it is safe to
+     * empty somebody's pack at all. Holding it in a map would mean a crash, a kill -9 or a
+     * power cut between taking it and giving it back costs a player everything they own -
+     * on a server where a life is one of three. Written to disk before the inventory is
+     * cleared and read back on the next login if it is still here, so the worst a crash can
+     * do is give it back a minute later than expected.
+     *
+     * <p>Opaque to core, which has no idea what an ItemStack is. The plugin encodes it.
+     */
+    private String storedInventory;
+
     private final Set<String> traitIds = new LinkedHashSet<>();
     private String blessingId;
     private String curseId;
@@ -144,6 +158,15 @@ public final class PlayerProfile {
 
     public void setCrossingCooldownUntil(long crossingCooldownUntil) {
         this.crossingCooldownUntil = crossingCooldownUntil;
+    }
+
+    /** The put-aside inventory, or null when the player is carrying their own. */
+    public String storedInventory() {
+        return storedInventory;
+    }
+
+    public void setStoredInventory(String storedInventory) {
+        this.storedInventory = storedInventory;
     }
 
     public Set<String> traitIds() {

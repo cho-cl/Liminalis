@@ -83,7 +83,7 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             int allowed = allowedFor(player);
             DroneFleet fleet = drones.fleetOf(player);
 
@@ -126,7 +126,7 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             List<Bee> fleet = drones.dronesOf(player);
             if (fleet.isEmpty()) {
                 messages.send(player, "ability.drones.none-out");
@@ -180,7 +180,7 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             DroneFleet fleet = drones.fleetOf(player);
             if (fleet.isEmpty()) {
                 messages.send(player, "ability.drones.none-out");
@@ -236,7 +236,7 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             DroneFleet fleet = drones.fleetOf(player);
             if (fleet.isEmpty()) {
                 messages.send(player, "ability.drones.none-out");
@@ -248,7 +248,9 @@ public final class DronesAbility implements Ability {
                 messages.send(player, "ability.drones.no-block");
                 return false;
             }
-            Bee bee = fleet.idleDrone();
+            // A loaded drone first, so that having put a block on one decides what the
+            // command does rather than the order the swarm happens to be in.
+            Bee bee = fleet.idleCarrier();
             if (bee == null) {
                 messages.send(player, "ability.drones.all-busy");
                 return false;
@@ -299,7 +301,7 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             DroneFleet fleet = drones.fleetOf(player);
             if (fleet.isEmpty()) {
                 messages.send(player, "ability.drones.none-out");
@@ -347,10 +349,10 @@ public final class DronesAbility implements Ability {
         }
 
         @Override
-        public boolean use(Player player, Player ignored) {
+        public boolean use(Player player, LivingEntity ignored) {
             Aggression next = drones.fleetOf(player).aggression().next();
             drones.setAggression(player, next);
-            messages.send(player, "ability.drones.temperament",
+            messages.send(player, "ability.drones.temperament-set",
                     Messages.placeholder("mode",
                             messages.get("ability.drones.mode." + next.id())));
             return true;

@@ -87,15 +87,16 @@ public final class AbilityService implements Listener {
      * state of the world.
      */
     public void fire(Player user, Ability ability, Power power, Player target) {
-        // The focus has to be in hand. It makes an ability visible across a field and makes
-        // using one a decision, because the hand holding a staff is not holding a sword.
-        if (!AbilityFocus.held(plugin, user, ability.id())) {
-            messages.send(user, "ability.focus.missing",
-                    Messages.placeholder("focus",
-                            messages.get("ability." + ability.id() + ".focus.name")));
-            return;
-        }
-
+        // Powers used to require their focus item in hand, and the idea was that an ability
+        // should be visible across a field. It cost far more than it bought. Every ability had
+        // to ship an item and two message keys before any of its powers would fire at all, so
+        // the second ability written - which has no focus, because a swarm of bees is already
+        // visible across a field - refused every power with a broken line of text naming an
+        // item that did not exist and could not be obtained. A gate that has to be satisfied
+        // by content nobody remembered to write is a gate that mostly catches its own author.
+        //
+        // The focus items still exist and the Priest's staff still makes a priest glow. It is
+        // something you carry because you want to, rather than a lock on your own ability.
         long remaining = cooldownRemaining(user, power);
         if (remaining > 0) {
             messages.send(user, "ability.cooling",

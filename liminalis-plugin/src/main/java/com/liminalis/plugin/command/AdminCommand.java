@@ -144,6 +144,7 @@ public final class AdminCommand {
 
                 .then(Commands.literal("level").then(player().then(amount()
                         .executes(this::level))))
+                .then(abilityTree())
                 .then(Commands.literal("lives").then(player().then(amount()
                         .executes(this::lives))))
 
@@ -164,6 +165,84 @@ public final class AdminCommand {
                 .then(Commands.literal("reload").executes(this::reload))
                 .then(dataTree())
                 .build();
+    }
+
+    /**
+     * {@code /lim ability ...} - the one kind of thing that earned its own name back.
+     *
+     * <p>Everything here is also reachable through the shared {@code give} and {@code take},
+     * and that is not an argument for leaving it out. Flattening the tree removed the word
+     * "ability" from the admin commands entirely, so somebody looking for how to hand one out
+     * typed {@code /lim ability} and found nothing at all - which reads as the feature being
+     * missing rather than as it having moved. Abilities are also the one thing on this server
+     * that is commissioned by hand, one player at a time, so it is the subtree most likely to
+     * be reached for by name.
+     *
+     * <p>It is a second door onto the same room. {@code give} here is the same method, with
+     * the completion list narrowed to abilities - which is the part that actually helps,
+     * since there are two of them among forty-odd ids.
+     */
+    private com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> abilityTree() {
+        return Commands.literal("ability")
+                .requires(permission("liminalis.admin.ability"))
+                .then(Commands.literal("give")
+                        .then(player().then(abilityArgument().executes(this::give))))
+                .then(Commands.literal("remove").then(player().executes(this::removeAbility)))
+                .then(Commands.literal("level")
+                        .then(player().then(amount().executes(this::level))))
+                .then(Commands.literal("list").executes(
+                        context -> list(context, ModifierType.ABILITY.id())));
+    }
+
+    /** Only the ability ids, which is the whole reason this door is worth having. */
+    private RequiredArgumentBuilder<CommandSourceStack, String> abilityArgument() {
+        return Commands.argument("id", StringArgumentType.word())
+                .suggests((context, builder) -> {
+                    String typed = builder.getRemainingLowerCase();
+                    for (Modifier modifier : registry.ofType(ModifierType.ABILITY)) {
+                        if (modifier.id().startsWith(typed)) {
+                            builder.suggest(modifier.id());
+                        }
+                    }
+                    return builder.buildFuture();
+                });
+    }
+
+    /**
+     * Takes away whatever ability they have, without needing to be told which.
+     *
+     * <p>A player holds exactly one, so naming it would be asking the operator to look up
+     * something the server already knows - and getting it wrong would be an error message
+     * for no reason.
+     */
+    private int removeAbility(CommandContext<CommandSourceStack> context) {
+        CommandSender sender = context.getSource().getSender();
+        PlayerProfile profile = profile(sender, context);
+        if (profile == null) {
+            return Command.SINGLE_SUCCESS;
+        }
+        String current = profile.abilityId();
+        if (current == null) {
+            sender.sendMessage(Component.text(profile.lastKnownName()
+                    + " has no ability.", WARN));
+            return Command.SINGLE_SUCCESS;
+        }
+        Modifier modifier = registry.find(current).orElse(null);
+        if (modifier == null) {
+            // The id is in the profile but this build has no code for it. Clear it anyway -
+            // refusing would leave them stuck with an ability nothing can remove.
+            profile.setAbilityId(null);
+            profile.setAbilityTier(0);
+            profile.clearAbilityProgress();
+        } else {
+            grants.take(profile, modifier);
+        }
+        persist(profile);
+
+        sender.sendMessage(Component.text("Took " + current + " from "
+                + profile.lastKnownName() + ".", GOOD));
+        audit.record(sender.getName(), "ability.remove", profile.lastKnownName(), current, "-");
+        return Command.SINGLE_SUCCESS;
     }
 
     /**
@@ -202,6 +281,7 @@ public final class AdminCommand {
                 "info <id>              what it does",
                 "who <player>           their whole state",
                 "level <player> <n>     ability level, or up / down",
+                "ability give|remove|level|list <player> ...",
                 "lives <player> <n>     lives, or up / down",
                 "limbo <player>         send them to the grey",
                 "revive <player>        bring them back",

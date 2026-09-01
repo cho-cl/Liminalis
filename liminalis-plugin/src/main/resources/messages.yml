@@ -329,8 +329,11 @@ ability:
   failed: "<red>Something went wrong. It has been logged.</red>"
   no-target: "<gray>Look at someone first, or name them: </gray><white>/ability <slot> <player></white>"
   focus:
-    missing: "<gray>You need to be holding your <white><focus></white>.</gray>"
-    hold-it: "<dark_gray>Hold this to use your ability.</dark_gray>"
+    # Holding a focus is no longer required to use a power. It gated every
+    # ability behind an item, and any ability without one refused all of its
+    # powers while naming an item that did not exist. The item is now a
+    # keepsake that makes its owner recognisable, and nothing more.
+    hold-it: "<dark_gray>Carry it and people will know what you are.</dark_gray>"
   no-such-player: "<gray><player> is not here.</gray>"
   too-far: "<gray><player> is too far away.</gray>"
 
